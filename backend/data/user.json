@@ -1,0 +1,30 @@
+{
+  "profile": {
+    "firstName": "Gopi",
+    "lastName": "Chand",
+    "email": "gopichand3644965@gmail.com",
+    "phone": "",
+    "address": "v.p.o.  dhinga wali",
+    "city": "fazilka",
+    "country": "India"
+  },
+  "addresses": [
+    {
+      "id": "1780086649701",
+      "label": "dhinga wali",
+      "address": "v.p.o.  dhinga wali",
+      "city": "fazilka",
+      "country": "India"
+    }
+  ],
+  "settings": {
+    "newsletter": true,
+    "notifications": true
+  },
+  "cart": [
+    {
+      "id": "TSHIRT001",
+      "quantity": 1
+    }
+  ]
+}

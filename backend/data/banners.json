@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Automated Test Banner",
+    "subtitle": "Uploaded via test",
+    "image": "/assets/banners/uploaded-hero1.jpg",
+    "id": 3
+  },
+  {
+    "id": 2,
+    "image": "/assets/banners/hero2.jpg",
+    "title": "Summer Sale",
+    "subtitle": "Up to 50% off vibrant summer tees."
+  },
+  {
+    "title": "premium shirt",
+    "subtitle": "summer sale option for two days",
+    "image": "/assets/banners/1780085753186--25DDA95B-132F-4EF1-BECF-437A876FCDEB-.png",
+    "id": 4
+  },
+  {
+    "title": "Automated Test Banner",
+    "subtitle": "Uploaded via test",
+    "image": "/assets/banners/hero1.jpg",
+    "id": 5
+  }
+]

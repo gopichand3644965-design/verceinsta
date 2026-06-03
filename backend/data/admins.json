@@ -1,0 +1,19 @@
+[
+  {
+    "id": "admin-1",
+    "name": "Super Admin",
+    "email": "admin@pandasstore.com",
+    "role": "owner",
+    "password_hash": "$2b$10$0VUh82oIU.3JRzo/65yG5Odeu9juzDmtcMHtZRxM1jifdbK4cndVi",
+    "created_at": "2026-06-01T00:00:00.000Z"
+  }
+  ,
+  {
+    "id": "admin-2",
+    "name": "Gopi Admin",
+    "email": "gopi@pandasstore.com",
+    "role": "admin",
+    "password_hash": "$2b$10$0VUh82oIU.3JRzo/65yG5Odeu9juzDmtcMHtZRxM1jifdbK4cndVi",
+    "created_at": "2026-06-01T12:00:00.000Z"
+  }
+]

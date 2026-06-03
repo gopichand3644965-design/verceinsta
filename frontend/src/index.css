@@ -1,0 +1,63 @@
+@import "tailwindcss";
+@config "../tailwind.config.cjs";
+
+
+/* Global base styles */
+@layer base {
+  html, body {
+    @apply m-0 p-0 box-border antialiased overflow-x-hidden bg-white text-gray-900;
+    font-family: 'Inter', sans-serif;
+  }
+  /* Make all elements use border-box to avoid unexpected widths */
+  *, *::before, *::after {
+    box-sizing: inherit;
+  }
+  /* Ensure media and embedded elements are responsive */
+  img, picture, video, canvas, svg, iframe {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  /* Prevent accidental horizontal overscroll on mobile */
+  body {
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-x: none;
+  }
+
+  /* Debug helper: when `.debug-overflow` is added to <html> or <body>,
+     outlines all elements and highlights overflowing elements */
+  .debug-overflow * {
+    outline: 1px dashed rgba(255,0,0,0.12);
+    outline-offset: -1px;
+  }
+  .overflow-highlight {
+    outline: 3px solid rgba(255,0,0,0.9) !important;
+    background: rgba(255,0,0,0.06) !important;
+  }
+  #root {
+    @apply w-full min-h-screen flex flex-col;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  .btn-primary {
+    background-color: hsl(24, 90%, 45%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+  }
+  .btn-primary:hover {
+    background-color: hsl(24, 90%, 38%);
+  }
+  .card {
+    @apply bg-white rounded-lg shadow-sm overflow-hidden;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

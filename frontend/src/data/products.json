@@ -1,0 +1,107 @@
+[
+  {
+    "id": "TSHIRT001",
+    "productCode": "TS-001",
+    "name": "Classic Crew Neck",
+    "title": "Classic Crew Neck",
+    "price": 29.99,
+    "discount": 5,
+    "rating": 4.5,
+    "image": "/assets/products/crew-neck.jpg",
+    "images": [
+      "/assets/products/crew-neck.jpg",
+      "/assets/products/crew-neck.jpg",
+      "/assets/products/crew-neck.jpg"
+    ],
+    "colors": ["#000000", "#ffffff", "#ff0000"],
+    "sizes": ["S", "M", "L", "XL", "XXL"],
+    "description": "A timeless classic crew neck T-shirt crafted from 100% premium cotton. Soft, breathable, and built to last.",
+    "isTrending": true,
+    "isNewArrival": false,
+    "category": "Plain"
+  },
+  {
+    "id": "TSHIRT002",
+    "productCode": "TS-002",
+    "name": "V-Neck Premium",
+    "title": "V-Neck Premium",
+    "price": 34.99,
+    "discount": 0,
+    "rating": 4.8,
+    "image": "/assets/products/v-neck.jpg",
+    "images": [
+      "/assets/products/v-neck.jpg",
+      "/assets/products/v-neck.jpg",
+      "/assets/products/v-neck.jpg"
+    ],
+    "colors": ["#000000", "#333333", "#777777"],
+    "sizes": ["S", "M", "L", "XL", "XXL"],
+    "description": "Premium V-neck T-shirt with a modern slim fit. Made from ultra-soft jersey fabric for all-day comfort.",
+    "isTrending": false,
+    "isNewArrival": true,
+    "category": "Plain"
+  },
+  {
+    "id": "TSHIRT003",
+    "productCode": "TS-003",
+    "name": "Striped Summer Tee",
+    "title": "Striped Summer Tee",
+    "price": 24.99,
+    "discount": 10,
+    "rating": 4.2,
+    "image": "/assets/products/striped.jpg",
+    "images": [
+      "/assets/products/striped.jpg",
+      "/assets/products/striped.jpg",
+      "/assets/products/striped.jpg"
+    ],
+    "colors": ["#0044ff", "#ff4400", "#00ff44"],
+    "sizes": ["S", "M", "L", "XL", "XXL"],
+    "description": "A vibrant striped summer tee perfect for casual outings. Lightweight fabric keeps you cool all day.",
+    "isTrending": true,
+    "isNewArrival": false,
+    "category": "Striped"
+  },
+  {
+    "id": "TSHIRT004",
+    "productCode": "TS-004",
+    "name": "Premium Polo Shirt",
+    "title": "Premium Polo Shirt",
+    "price": 45.00,
+    "discount": 0,
+    "rating": 4.9,
+    "image": "/assets/products/polo.jpg",
+    "images": [
+      "/assets/products/polo.jpg",
+      "/assets/products/polo.jpg",
+      "/assets/products/polo.jpg"
+    ],
+    "colors": ["#1a202c", "#ffffff", "#e2e8f0"],
+    "sizes": ["M", "L", "XL"],
+    "description": "Elevate your casual look with this premium polo. Features a ribbed collar and breathable pique fabric.",
+    "isTrending": true,
+    "isNewArrival": true,
+    "category": "Polo"
+  },
+  {
+    "id": "TSHIRT005",
+    "productCode": "TS-005",
+    "name": "Abstract Graphic Tee",
+    "title": "Abstract Graphic Tee",
+    "price": 27.50,
+    "discount": 15,
+    "rating": 4.1,
+    "image": "/assets/products/graphic.jpg",
+    "images": [
+      "/assets/products/graphic.jpg",
+      "/assets/products/graphic.jpg",
+      "/assets/products/graphic.jpg"
+    ],
+    "colors": ["#000000"],
+    "sizes": ["S", "M", "L"],
+    "description": "Make a statement with this modern abstract graphic tee. Printed on premium ultra-soft cotton.",
+    "isTrending": false,
+    "isNewArrival": true,
+    "category": "Graphic"
+  }
+]

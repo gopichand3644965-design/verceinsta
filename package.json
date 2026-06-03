@@ -1,0 +1,10 @@
+{
+  "name": "fullwb",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend && npm run dev -- --host",
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && npm start",
+    "start": "npm run backend"
+  }
+}
