@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://iinstawebs-wxli.vercel.app/api/$1" },
-    { "source": "/assets/banners/(.*)", "destination": "https://iinstawebs-wxli.vercel.app/assets/banners/$1" },
+    { "source": "/api/(.*)", "destination": "https://iinstawebs-1.onrender.com/api/$1" },
+    { "source": "/assets/banners/(.*)", "destination": "https://iinstawebs-1.onrender.com/assets/banners/$1" },
     { "source": "/(css|js|assets|img)/(.*)", "destination": "/$1/$2" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

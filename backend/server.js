@@ -182,6 +182,10 @@ function validateProduct(payload) {
   return null;
 }
 
+app.get('/', (req, res) => {
+  res.json({ message: 'Backend is running successfully!', status: 'ok' });
+});
+
 app.get('/api/ping', (req, res) => {
   res.json({ status: 'ok' });
 });
