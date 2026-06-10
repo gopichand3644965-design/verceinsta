@@ -29,7 +29,9 @@ function createAdminRouter({ supabase, readJson, writeJson, dataDir }) {
       return admins.find((admin) => normalizeEmail(admin.email) === normalizedEmail) || null;
     };
 
-    if (supabase) {
+    const isSupabaseConfigured = !!supabase;
+
+    if (isSupabaseConfigured) {
       const { data, error } = await supabase
         .from('admins')
         .select('id,name,email,password_hash,role')
@@ -37,13 +39,13 @@ function createAdminRouter({ supabase, readJson, writeJson, dataDir }) {
         .single();
 
       if (error) {
-        console.warn('Supabase admin lookup failed, falling back to local admin seed:', error.message || error);
-        return loadLocalAdmin();
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        throw new Error(`Supabase admin lookup failed: ${error.message}`);
       }
 
-      if (data) {
-        return data;
-      }
+      return data || null;
     }
 
     return loadLocalAdmin();

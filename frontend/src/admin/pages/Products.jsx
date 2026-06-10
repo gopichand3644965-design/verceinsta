@@ -9,7 +9,14 @@ export default function Products() {
   const items = useProducts();
   const { deleteProduct } = useProductsContext();
 
-  const filtered = items.filter((p) => p.title.toLowerCase().includes(query.toLowerCase()) || p.productCode?.toLowerCase().includes(query.toLowerCase()));
+  const filtered = items.filter((p) => {
+    const title = p.title || '';
+    const productCode = p.productCode || '';
+    return (
+      title.toLowerCase().includes(query.toLowerCase()) ||
+      productCode.toLowerCase().includes(query.toLowerCase())
+    );
+  });
 
   const handleDelete = (id) => {
     if (!confirm('Delete this product? This cannot be undone.')) return;

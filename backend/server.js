@@ -5,6 +5,7 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const createAdminRoutes = require('./auth/adminRoutes');
 const { authenticateAdmin } = require('./auth/middleware');
+const { verifyAdminToken } = require('./auth/token');
 require('dotenv').config();
 
 const app = express();
@@ -23,7 +24,9 @@ let supabase = null;
 let productsDbAvailable = false;
 let productsDbSeedBlockedByRls = false;
 
-if (supabaseUrl && supabaseKey) {
+const isSupabaseConfigured = !!(supabaseUrl && supabaseKey);
+
+if (isSupabaseConfigured) {
   supabase = createClient(supabaseUrl, supabaseKey);
 } else {
   console.warn('Supabase credentials not found. Set SUPABASE_URL and SUPABASE_KEY or SUPABASE_SERVICE_ROLE_KEY in .env');
@@ -117,22 +120,77 @@ async function getProductFromDb(id) {
 async function createProductInDb(product) {
   if (!supabase) throw new Error('Supabase not initialized');
   const { error } = await supabase.from('products').insert([{ id: product.id, data: product }]);
-  if (error) throw error;
+  if (error) {
+    if (isRlsError(error.message)) {
+      throw new Error('Supabase write operation blocked by Row-Level Security. Please verify that the SUPABASE_SERVICE_ROLE_KEY environment variable is correctly configured on the backend.');
+    }
+    throw error;
+  }
 }
 
 async function updateProductInDb(id, product) {
   if (!supabase) throw new Error('Supabase not initialized');
   const { error } = await supabase.from('products').update({ data: product }).eq('id', id);
-  if (error) throw error;
+  if (error) {
+    if (isRlsError(error.message)) {
+      throw new Error('Supabase write operation blocked by Row-Level Security. Please verify that the SUPABASE_SERVICE_ROLE_KEY environment variable is correctly configured on the backend.');
+    }
+    throw error;
+  }
 }
 
 async function deleteProductFromDb(id) {
   if (!supabase) throw new Error('Supabase not initialized');
   const { error } = await supabase.from('products').delete().eq('id', id);
-  if (error) throw error;
+  if (error) {
+    if (isRlsError(error.message)) {
+      throw new Error('Supabase write operation blocked by Row-Level Security. Please verify that the SUPABASE_SERVICE_ROLE_KEY environment variable is correctly configured on the backend.');
+    }
+    throw error;
+  }
 }
 
-app.use(cors({ origin: true }));
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  : [];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+    if (!origin) return callback(null, true);
+
+    // If ALLOWED_ORIGINS contains '*', allow all
+    if (allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+
+    // Check if origin is in ALLOWED_ORIGINS
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Check if FRONTEND_URL matches
+    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
+      return callback(null, true);
+    }
+
+    // Always allow localhost in development/testing
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+
+    // Default fallback: if no environment variables are set to restrict origins,
+    // allow the request origin (same as origin: true) for backwards compatibility
+    if (allowedOrigins.length === 0 && !process.env.FRONTEND_URL) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Customer-Token', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Date', 'X-Api-Version']
+}));
 app.use(express.json({ limit: '15mb' }));
 app.use('/api/admin', createAdminRoutes({ supabase, readJson, writeJson, dataDir: DATA_DIR }));
 
@@ -154,7 +212,43 @@ async function writeJson(filePath, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
-async function loadUserData() {
+async function loadUserData(customerToken) {
+  if (isSupabaseConfigured) {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('profile, addresses, settings, cart, wishlist')
+      .eq('customer_token', customerToken)
+      .single();
+    if (error) {
+      if (error.code === 'PGRST116') {
+        const defaultData = {
+          customer_token: customerToken,
+          profile: {},
+          addresses: [],
+          settings: { newsletter: true, notifications: true },
+          cart: [],
+          wishlist: []
+        };
+        await supabase.from('customers').insert([defaultData]);
+        return {
+          profile: defaultData.profile,
+          addresses: defaultData.addresses,
+          settings: defaultData.settings,
+          cart: defaultData.cart,
+          wishlist: defaultData.wishlist
+        };
+      }
+      throw error;
+    }
+    return {
+      profile: data.profile || {},
+      addresses: Array.isArray(data.addresses) ? data.addresses : [],
+      settings: data.settings || {},
+      cart: Array.isArray(data.cart) ? data.cart : [],
+      wishlist: Array.isArray(data.wishlist) ? data.wishlist : [],
+    };
+  }
+
   const user = await readJson(USER_FILE, { profile: {}, addresses: [], settings: {}, cart: [], wishlist: [] });
   return {
     profile: user.profile || {},
@@ -165,7 +259,23 @@ async function loadUserData() {
   };
 }
 
-async function saveUserData(userData) {
+async function saveUserData(customerToken, userData) {
+  if (isSupabaseConfigured) {
+    const { error } = await supabase
+      .from('customers')
+      .upsert({
+        customer_token: customerToken,
+        profile: userData.profile || {},
+        addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
+        settings: userData.settings || {},
+        cart: Array.isArray(userData.cart) ? userData.cart : [],
+        wishlist: Array.isArray(userData.wishlist) ? userData.wishlist : [],
+        updated_at: new Date().toISOString()
+      });
+    if (error) throw error;
+    return;
+  }
+
   await writeJson(USER_FILE, {
     profile: userData.profile || {},
     addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
@@ -191,35 +301,19 @@ app.get('/api/ping', (req, res) => {
 });
 
 app.get('/api/products', asyncHandler(async (req, res) => {
-  if (productsDbAvailable) {
-    try {
-      const products = await getProductsFromDb();
-      if (products && products.length > 0) {
-        return res.json(products);
-      }
-      if (productsDbSeedBlockedByRls) {
-        console.warn('Products DB is available but empty due to RLS seed block; returning local JSON products.');
-      }
-    } catch (error) {
-      console.warn('Products DB read failed, falling back to local JSON:', error.message || error);
-    }
+  if (isSupabaseConfigured) {
+    const products = await getProductsFromDb();
+    return res.json(products);
   }
   const products = await readJson(PRODUCTS_FILE, []);
   res.json(products);
 }));
 
 app.get('/api/products/:id', asyncHandler(async (req, res) => {
-  if (productsDbAvailable) {
-    try {
-      const product = await getProductFromDb(req.params.id);
-      if (product) return res.json(product);
-      if (!productsDbSeedBlockedByRls) {
-        return res.status(404).json({ error: 'Product not found.' });
-      }
-      console.warn('Product not found in Supabase, falling back to local JSON.');
-    } catch (error) {
-      console.warn('Products DB item read failed, falling back to local JSON:', error.message || error);
-    }
+  if (isSupabaseConfigured) {
+    const product = await getProductFromDb(req.params.id);
+    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    return res.json(product);
   }
   const products = await readJson(PRODUCTS_FILE, []);
   const product = products.find((item) => item.id === req.params.id);
@@ -233,15 +327,11 @@ app.post('/api/products', authenticateAdmin, asyncHandler(async (req, res) => {
   const validationError = validateProduct(payload);
   if (validationError) return res.status(400).json({ error: validationError });
 
-  if (productsDbAvailable) {
-    try {
-      const existing = await getProductFromDb(payload.id);
-      if (existing) return res.status(409).json({ error: 'Product id already exists.' });
-      await createProductInDb(payload);
-      return res.status(201).json(payload);
-    } catch (error) {
-      console.warn('Products DB write failed on create, falling back to local JSON:', error.message || error);
-    }
+  if (isSupabaseConfigured) {
+    const existing = await getProductFromDb(payload.id);
+    if (existing) return res.status(409).json({ error: 'Product id already exists.' });
+    await createProductInDb(payload);
+    return res.status(201).json(payload);
   }
 
   const products = await readJson(PRODUCTS_FILE, []);
@@ -255,23 +345,14 @@ app.post('/api/products', authenticateAdmin, asyncHandler(async (req, res) => {
 
 app.put('/api/products/:id', authenticateAdmin, asyncHandler(async (req, res) => {
   let updated = null;
-  if (productsDbAvailable) {
-    try {
-      const existing = await getProductFromDb(req.params.id);
-      if (existing) {
-        updated = { ...existing, ...req.body, id: req.params.id };
-        const validationError = validateProduct(updated);
-        if (validationError) return res.status(400).json({ error: validationError });
-        await updateProductInDb(req.params.id, updated);
-        return res.json(updated);
-      }
-      if (!productsDbSeedBlockedByRls) {
-        return res.status(404).json({ error: 'Product not found.' });
-      }
-      console.warn('Product not found in Supabase, falling back to local JSON.');
-    } catch (error) {
-      console.warn('Products DB write failed on update, falling back to local JSON:', error.message || error);
-    }
+  if (isSupabaseConfigured) {
+    const existing = await getProductFromDb(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Product not found.' });
+    updated = { ...existing, ...req.body, id: req.params.id };
+    const validationError = validateProduct(updated);
+    if (validationError) return res.status(400).json({ error: validationError });
+    await updateProductInDb(req.params.id, updated);
+    return res.json(updated);
   }
 
   const products = await readJson(PRODUCTS_FILE, []);
@@ -286,21 +367,11 @@ app.put('/api/products/:id', authenticateAdmin, asyncHandler(async (req, res) =>
 }));
 
 app.delete('/api/products/:id', authenticateAdmin, asyncHandler(async (req, res) => {
-  let existing = null;
-  if (productsDbAvailable) {
-    try {
-      existing = await getProductFromDb(req.params.id);
-      if (existing) {
-        await deleteProductFromDb(req.params.id);
-        return res.status(204).end();
-      }
-      if (!productsDbSeedBlockedByRls) {
-        return res.status(404).json({ error: 'Product not found.' });
-      }
-      console.warn('Product not found in Supabase, falling back to local JSON.');
-    } catch (error) {
-      console.warn('Products DB write failed on delete, falling back to local JSON:', error.message || error);
-    }
+  if (isSupabaseConfigured) {
+    const existing = await getProductFromDb(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Product not found.' });
+    await deleteProductFromDb(req.params.id);
+    return res.status(204).end();
   }
 
   const products = await readJson(PRODUCTS_FILE, []);
@@ -311,182 +382,426 @@ app.delete('/api/products/:id', authenticateAdmin, asyncHandler(async (req, res)
 }));
 
 app.get('/api/orders', async (req, res) => {
-  const orders = await readJson(ORDERS_FILE, []);
-  res.json(orders);
+  try {
+    const authHeader = req.headers.authorization || req.headers.Authorization || '';
+    let isAdmin = false;
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7).trim();
+      try {
+        verifyAdminToken(token);
+        isAdmin = true;
+      } catch (err) {
+        // Treat as guest if admin verify fails
+      }
+    }
+
+    if (isSupabaseConfigured) {
+      let query = supabase.from('orders').select('*');
+      if (!isAdmin) {
+        const customerToken = req.headers['x-customer-token'] || 'default-guest';
+        query = query.eq('customer_token', customerToken);
+      }
+      const { data, error } = await query.order('date', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    }
+
+    const orders = await readJson(ORDERS_FILE, []);
+    res.json(orders);
+  } catch (err) {
+    console.error('Failed to fetch orders:', err);
+    res.status(500).json({ error: 'Failed to fetch orders.' });
+  }
 });
 
 app.post('/api/orders', async (req, res) => {
-  const orders = await readJson(ORDERS_FILE, []);
-  const payload = { ...req.body, id: req.body.id || `ORD-${Date.now()}`, date: req.body.date || new Date().toISOString(), status: req.body.status || 'Placed' };
-  if (!Array.isArray(payload.items) || payload.items.length === 0) {
-    return res.status(400).json({ error: 'Order must include at least one item.' });
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const payload = {
+      ...req.body,
+      id: req.body.id || `ORD-${Date.now()}`,
+      date: req.body.date || new Date().toISOString(),
+      status: req.body.status || 'Placed'
+    };
+    if (!Array.isArray(payload.items) || payload.items.length === 0) {
+      return res.status(400).json({ error: 'Order must include at least one item.' });
+    }
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('orders')
+        .insert([{
+          id: payload.id,
+          customer_token: customerToken,
+          date: payload.date,
+          status: payload.status,
+          shipping: payload.shipping || {},
+          items: payload.items,
+          total: Number(payload.total || 0)
+        }]);
+      if (error) throw error;
+      return res.status(201).json(payload);
+    }
+
+    const orders = await readJson(ORDERS_FILE, []);
+    orders.push(payload);
+    await writeJson(ORDERS_FILE, orders);
+    res.status(201).json(payload);
+  } catch (err) {
+    console.error('Failed to create order:', err);
+    res.status(500).json({ error: 'Failed to create order.' });
   }
-  orders.push(payload);
-  await writeJson(ORDERS_FILE, orders);
-  res.status(201).json(payload);
 });
 
 app.put('/api/orders/:id/status', authenticateAdmin, async (req, res) => {
-  const orders = await readJson(ORDERS_FILE, []);
-  const index = orders.findIndex((item) => item.id === req.params.id);
-  if (index === -1) return res.status(404).json({ error: 'Order not found.' });
-  orders[index] = { ...orders[index], status: req.body.status || orders[index].status };
-  await writeJson(ORDERS_FILE, orders);
-  res.json(orders[index]);
+  try {
+    const orderId = req.params.id;
+    const status = req.body.status;
+    if (!status) return res.status(400).json({ error: 'Status is required.' });
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId)
+        .select()
+        .single();
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return res.status(404).json({ error: 'Order not found.' });
+        }
+        throw error;
+      }
+      return res.json(data);
+    }
+
+    const orders = await readJson(ORDERS_FILE, []);
+    const index = orders.findIndex((item) => item.id === orderId);
+    if (index === -1) return res.status(404).json({ error: 'Order not found.' });
+    orders[index] = { ...orders[index], status };
+    await writeJson(ORDERS_FILE, orders);
+    res.json(orders[index]);
+  } catch (err) {
+    console.error('Failed to update order status:', err);
+    res.status(500).json({ error: 'Failed to update order status.' });
+  }
 });
 
 app.get('/api/user/profile', async (req, res) => {
-  const user = await loadUserData();
-  res.json(user);
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    res.json(user);
+  } catch (err) {
+    console.error('Failed to load user profile:', err);
+    res.status(500).json({ error: 'Failed to load user profile.' });
+  }
 });
 
 app.put('/api/user/profile', async (req, res) => {
-  const user = await loadUserData();
-  user.profile = { ...user.profile, ...req.body };
-  await saveUserData(user);
-  res.json(user.profile);
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    user.profile = { ...user.profile, ...req.body };
+    await saveUserData(customerToken, user);
+    res.json(user.profile);
+  } catch (err) {
+    console.error('Failed to update user profile:', err);
+    res.status(500).json({ error: 'Failed to update user profile.' });
+  }
 });
 
 app.get('/api/user/settings', async (req, res) => {
-  const user = await loadUserData();
-  res.json(user.settings);
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    res.json(user.settings);
+  } catch (err) {
+    console.error('Failed to load user settings:', err);
+    res.status(500).json({ error: 'Failed to load user settings.' });
+  }
 });
 
 app.put('/api/user/settings', async (req, res) => {
-  const user = await loadUserData();
-  user.settings = { ...user.settings, ...req.body };
-  await saveUserData(user);
-  res.json(user.settings);
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    user.settings = { ...user.settings, ...req.body };
+    await saveUserData(customerToken, user);
+    res.json(user.settings);
+  } catch (err) {
+    console.error('Failed to update user settings:', err);
+    res.status(500).json({ error: 'Failed to update user settings.' });
+  }
 });
 
 app.get('/api/user/addresses', async (req, res) => {
-  const user = await loadUserData();
-  res.json(user.addresses);
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    res.json(user.addresses);
+  } catch (err) {
+    console.error('Failed to load user addresses:', err);
+    res.status(500).json({ error: 'Failed to load user addresses.' });
+  }
 });
 
 app.post('/api/user/addresses', async (req, res) => {
-  const user = await loadUserData();
-  const address = { id: `A-${Date.now()}`, ...req.body };
-  user.addresses = [...user.addresses, address];
-  await saveUserData(user);
-  res.status(201).json(address);
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    const address = { id: `A-${Date.now()}`, ...req.body };
+    user.addresses = [...user.addresses, address];
+    await saveUserData(customerToken, user);
+    res.status(201).json(address);
+  } catch (err) {
+    console.error('Failed to add user address:', err);
+    res.status(500).json({ error: 'Failed to add user address.' });
+  }
 });
 
 app.delete('/api/user/addresses/:addressId', async (req, res) => {
-  const user = await loadUserData();
-  user.addresses = user.addresses.filter((a) => a.id !== req.params.addressId);
-  await saveUserData(user);
-  res.status(204).end();
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    user.addresses = user.addresses.filter((a) => a.id !== req.params.addressId);
+    await saveUserData(customerToken, user);
+    res.status(204).end();
+  } catch (err) {
+    console.error('Failed to delete user address:', err);
+    res.status(500).json({ error: 'Failed to delete user address.' });
+  }
 });
 
 app.get('/api/user/cart', async (req, res) => {
-  const user = await loadUserData();
-  res.json(user.cart);
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    res.json(user.cart);
+  } catch (err) {
+    console.error('Failed to load user cart:', err);
+    res.status(500).json({ error: 'Failed to load user cart.' });
+  }
 });
 
 app.put('/api/user/cart', async (req, res) => {
-  const user = await loadUserData();
-  if (!Array.isArray(req.body)) {
-    return res.status(400).json({ error: 'Cart payload must be an array.' });
+  try {
+    if (!Array.isArray(req.body)) {
+      return res.status(400).json({ error: 'Cart payload must be an array.' });
+    }
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    user.cart = req.body;
+    await saveUserData(customerToken, user);
+    res.json(user.cart);
+  } catch (err) {
+    console.error('Failed to update user cart:', err);
+    res.status(500).json({ error: 'Failed to update user cart.' });
   }
-  user.cart = req.body;
-  await saveUserData(user);
-  res.json(user.cart);
 });
 
 app.delete('/api/user/cart', async (req, res) => {
-  const user = await loadUserData();
-  user.cart = [];
-  await saveUserData(user);
-  res.status(204).end();
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    user.cart = [];
+    await saveUserData(customerToken, user);
+    res.status(204).end();
+  } catch (err) {
+    console.error('Failed to clear user cart:', err);
+    res.status(500).json({ error: 'Failed to clear user cart.' });
+  }
 });
 
 app.get('/api/user/wishlist', async (req, res) => {
-  const user = await loadUserData();
-  res.json(user.wishlist);
+  try {
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    res.json(user.wishlist);
+  } catch (err) {
+    console.error('Failed to load user wishlist:', err);
+    res.status(500).json({ error: 'Failed to load user wishlist.' });
+  }
 });
 
 app.put('/api/user/wishlist', async (req, res) => {
-  const user = await loadUserData();
-  if (!Array.isArray(req.body)) {
-    return res.status(400).json({ error: 'Wishlist payload must be an array.' });
+  try {
+    if (!Array.isArray(req.body)) {
+      return res.status(400).json({ error: 'Wishlist payload must be an array.' });
+    }
+    const customerToken = req.headers['x-customer-token'] || 'default-guest';
+    const user = await loadUserData(customerToken);
+    user.wishlist = Array.from(new Set(req.body.map(String)));
+    await saveUserData(customerToken, user);
+    res.json(user.wishlist);
+  } catch (err) {
+    console.error('Failed to update user wishlist:', err);
+    res.status(500).json({ error: 'Failed to update user wishlist.' });
   }
-  user.wishlist = Array.from(new Set(req.body.map(String)));
-  await saveUserData(user);
-  res.json(user.wishlist);
 });
 
 // Banner endpoints
 app.get('/api/banners', async (req, res) => {
-  let banners = await readJson(BANNERS_FILE, []);
-  if (!Array.isArray(banners) || banners.length === 0) {
-    const defaults = [
-      { id: 1, title: 'Default Banner 1', subtitle: 'Shop our collection', image: '/assets/banners/hero1.jpg' },
-      { id: 2, title: 'Default Banner 2', subtitle: 'New arrivals', image: '/assets/banners/hero2.jpg' },
-    ];
-    // Persist defaults so admin can edit/replace them later
-    await writeJson(BANNERS_FILE, defaults);
-    banners = defaults;
+  try {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('banners')
+        .select('*')
+        .order('display_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        const defaults = [
+          { title: 'Default Banner 1', subtitle: 'Shop our collection', image: '/assets/banners/hero1.jpg', display_order: 1 },
+          { title: 'Default Banner 2', subtitle: 'New arrivals', image: '/assets/banners/hero2.jpg', display_order: 2 },
+        ];
+        const { data: seeded, error: seedError } = await supabase.from('banners').insert(defaults).select();
+        if (seedError) throw seedError;
+        return res.json(seeded || []);
+      }
+      return res.json(data);
+    }
+
+    let banners = await readJson(BANNERS_FILE, []);
+    if (!Array.isArray(banners) || banners.length === 0) {
+      const defaults = [
+        { id: 1, title: 'Default Banner 1', subtitle: 'Shop our collection', image: '/assets/banners/hero1.jpg' },
+        { id: 2, title: 'Default Banner 2', subtitle: 'New arrivals', image: '/assets/banners/hero2.jpg' },
+      ];
+      await writeJson(BANNERS_FILE, defaults);
+      banners = defaults;
+    }
+    res.json(banners);
+  } catch (err) {
+    console.error('Failed to fetch banners:', err);
+    res.status(500).json({ error: 'Failed to fetch banners.' });
   }
-  res.json(banners);
 });
 
 app.post('/api/banners', authenticateAdmin, async (req, res) => {
-  const banners = await readJson(BANNERS_FILE, []);
-  const payload = { ...req.body, id: req.body.id || Math.max(...banners.map(b => b.id), 0) + 1 };
-  if (!payload.title || typeof payload.title !== 'string') {
-    return res.status(400).json({ error: 'Banner title is required.' });
+  try {
+    const payload = { ...req.body };
+    if (!payload.title || typeof payload.title !== 'string') {
+      return res.status(400).json({ error: 'Banner title is required.' });
+    }
+    if (!payload.image || typeof payload.image !== 'string') {
+      return res.status(400).json({ error: 'Banner image is required.' });
+    }
+
+    if (isSupabaseConfigured) {
+      const { data: maxOrderData } = await supabase
+        .from('banners')
+        .select('display_order')
+        .order('display_order', { ascending: false })
+        .limit(1);
+      const maxOrder = maxOrderData?.[0]?.display_order || 0;
+
+      const { data, error } = await supabase
+        .from('banners')
+        .insert([{
+          title: payload.title,
+          subtitle: payload.subtitle || '',
+          image: payload.image,
+          display_order: maxOrder + 1
+        }])
+        .select()
+        .single();
+      if (error) throw error;
+      return res.status(201).json(data);
+    }
+
+    const banners = await readJson(BANNERS_FILE, []);
+    const newBanner = { ...payload, id: Math.max(...banners.map(b => b.id), 0) + 1 };
+    banners.push(newBanner);
+    await writeJson(BANNERS_FILE, banners);
+    res.status(201).json(newBanner);
+  } catch (err) {
+    console.error('Failed to create banner:', err);
+    res.status(500).json({ error: 'Failed to create banner.' });
   }
-  if (!payload.image || typeof payload.image !== 'string') {
-    return res.status(400).json({ error: 'Banner image is required.' });
-  }
-  banners.push(payload);
-  await writeJson(BANNERS_FILE, banners);
-  res.status(201).json(payload);
 });
 
 app.put('/api/banners/:id', authenticateAdmin, async (req, res) => {
-  const banners = await readJson(BANNERS_FILE, []);
-  const index = banners.findIndex((b) => b.id === parseInt(req.params.id));
-  if (index === -1) return res.status(404).json({ error: 'Banner not found.' });
-  const updated = { ...banners[index], ...req.body, id: parseInt(req.params.id) };
-  if (!updated.title || typeof updated.title !== 'string') {
-    return res.status(400).json({ error: 'Banner title is required.' });
+  try {
+    const bannerId = parseInt(req.params.id);
+    const payload = req.body;
+    if (!payload.title || typeof payload.title !== 'string') {
+      return res.status(400).json({ error: 'Banner title is required.' });
+    }
+    if (!payload.image || typeof payload.image !== 'string') {
+      return res.status(400).json({ error: 'Banner image is required.' });
+    }
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('banners')
+        .update({
+          title: payload.title,
+          subtitle: payload.subtitle || '',
+          image: payload.image
+        })
+        .eq('id', bannerId)
+        .select()
+        .single();
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return res.status(404).json({ error: 'Banner not found.' });
+        }
+        throw error;
+      }
+      return res.json(data);
+    }
+
+    const banners = await readJson(BANNERS_FILE, []);
+    const index = banners.findIndex((b) => b.id === bannerId);
+    if (index === -1) return res.status(404).json({ error: 'Banner not found.' });
+    banners[index] = { ...banners[index], ...payload, id: bannerId };
+    await writeJson(BANNERS_FILE, banners);
+    res.json(banners[index]);
+  } catch (err) {
+    console.error('Failed to update banner:', err);
+    res.status(500).json({ error: 'Failed to update banner.' });
   }
-  if (!updated.image || typeof updated.image !== 'string') {
-    return res.status(400).json({ error: 'Banner image is required.' });
-  }
-  banners[index] = updated;
-  await writeJson(BANNERS_FILE, banners);
-  res.json(updated);
 });
 
 app.delete('/api/banners/:id', authenticateAdmin, async (req, res) => {
-  const banners = await readJson(BANNERS_FILE, []);
-  const next = banners.filter((b) => b.id !== parseInt(req.params.id));
-  if (next.length === banners.length) return res.status(404).json({ error: 'Banner not found.' });
-  await writeJson(BANNERS_FILE, next);
-  res.status(204).end();
+  try {
+    const bannerId = parseInt(req.params.id);
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('banners')
+        .delete()
+        .eq('id', bannerId);
+      if (error) throw error;
+      return res.status(204).end();
+    }
+
+    const banners = await readJson(BANNERS_FILE, []);
+    const next = banners.filter((b) => b.id !== bannerId);
+    if (next.length === banners.length) return res.status(404).json({ error: 'Banner not found.' });
+    await writeJson(BANNERS_FILE, next);
+    res.status(204).end();
+  } catch (err) {
+    console.error('Failed to delete banner:', err);
+    res.status(500).json({ error: 'Failed to delete banner.' });
+  }
 });
 
-// Upload banner image (base64 payload)
 app.post('/api/banners/upload', authenticateAdmin, async (req, res) => {
   try {
     const { filename, data } = req.body || {};
     if (!filename || !data) return res.status(400).json({ error: 'filename and data are required.' });
 
-    // Store in backend public directory, not frontend
     const targetDir = BANNERS_PUBLIC_DIR;
     await fs.mkdir(targetDir, { recursive: true });
 
-    // Strip data URL prefix if present
     const base64 = typeof data === 'string' && data.indexOf('base64,') !== -1 ? data.split('base64,')[1] : data;
     const buffer = Buffer.from(base64, 'base64');
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '-');
     const dest = path.join(targetDir, safeName);
     await fs.writeFile(dest, buffer);
 
-    // Return public path for frontend usage (goes through Vite proxy to backend)
     const publicPath = `/assets/banners/${safeName}`;
     res.json({ path: publicPath });
   } catch (err) {
@@ -495,16 +810,38 @@ app.post('/api/banners/upload', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Reorder banners (accepts array of banner ids in new order or full banners array)
 app.post('/api/banners/reorder', authenticateAdmin, async (req, res) => {
   try {
     const payload = req.body;
+    if (!Array.isArray(payload)) {
+      return res.status(400).json({ error: 'Invalid payload, expected array.' });
+    }
+
+    if (isSupabaseConfigured) {
+      if (payload.length === 0) {
+        const { data } = await supabase.from('banners').select('*').order('display_order', { ascending: true });
+        return res.json(data || []);
+      }
+
+      for (let index = 0; index < payload.length; index++) {
+        const item = payload[index];
+        const id = typeof item === 'object' ? item.id : parseInt(item);
+        if (id) {
+          await supabase.from('banners').update({ display_order: index }).eq('id', id);
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('banners')
+        .select('*')
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      return res.json(data || []);
+    }
+
     let banners = await readJson(BANNERS_FILE, []);
-    if (Array.isArray(payload)) {
-      // payload may be array of ids or full banner objects
-      if (payload.length === 0) return res.json(banners);
+    if (payload.length > 0) {
       if (typeof payload[0] === 'number' || typeof payload[0] === 'string') {
-        // array of ids
         const idOrder = payload.map((v) => parseInt(v));
         const map = Object.fromEntries(banners.map((b) => [b.id, b]));
         banners = idOrder.map((id) => map[id]).filter(Boolean);
@@ -512,9 +849,8 @@ app.post('/api/banners/reorder', authenticateAdmin, async (req, res) => {
         banners = payload;
       }
       await writeJson(BANNERS_FILE, banners);
-      return res.json(banners);
     }
-    return res.status(400).json({ error: 'Invalid payload, expected array.' });
+    res.json(banners);
   } catch (err) {
     console.error('reorder error', err);
     res.status(500).json({ error: 'Failed to reorder banners.' });
@@ -541,12 +877,17 @@ app.use((err, req, res, next) => {
   } catch (err) {
     // Ignore error if folder creation fails
   }
-  try {
-    await initProductsDb();
-    console.log('Products DB initialized and connected.');
-  } catch (err) {
-    productsDbAvailable = false;
-    console.warn('Products DB not available, falling back to JSON storage:', err && err.message ? err.message : err);
+  if (isSupabaseConfigured) {
+    try {
+      await initProductsDb();
+      console.log('Products DB initialized and connected.');
+    } catch (err) {
+      productsDbAvailable = false;
+      console.error('CRITICAL: Products DB not available on startup:', err && err.message ? err.message : err);
+      process.exit(1);
+    }
+  } else {
+    console.log('Supabase not configured. Using local JSON fallback storage.');
   }
 })();
 

@@ -23,28 +23,13 @@ export default function Settings() {
     setLoading(true);
 
     try {
-      let response;
-      try {
-        response = await fetch(loginUrl, {
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-          body: JSON.stringify({ email, password }),
-        });
-      } catch (err) {
-        // Network/proxy error — try direct backend URL as a fallback
-        try {
-          const fallback = 'http://localhost:4000/api/admin/login';
-          response = await fetch(fallback, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-          });
-        } catch (err2) {
-          throw new Error('Network error: could not reach authentication server.');
-        }
-      }
+        body: JSON.stringify({ email, password }),
+      });
 
       const text = await response.text();
       const result = text ? JSON.parse(text) : null;

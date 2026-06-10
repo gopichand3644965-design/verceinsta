@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { FiHome, FiSearch, FiHeart, FiUser } from 'react-icons/fi';
+import { FiHome, FiSearch, FiHeart, FiUser, FiShoppingCart } from 'react-icons/fi';
 
 export default function BottomNav() {
   return (
@@ -23,7 +23,12 @@ export default function BottomNav() {
             <span>Wishlist</span>
           </NavLink>
         </li>
-        {/* Cart link removed */}
+        <li>
+          <NavLink to="/cart" className="flex flex-col items-center text-sm text-gray-600 dark:text-gray-300 hover:text-primary">
+            <FiShoppingCart className="w-6 h-6" />
+            <span>Cart</span>
+          </NavLink>
+        </li>
         <li>
           <NavLink to="/profile" className="flex flex-col items-center text-sm text-gray-600 dark:text-gray-300 hover:text-primary">
             <FiUser className="w-6 h-6" />

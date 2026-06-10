@@ -1,8 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { FiPackage, FiLogOut } from 'react-icons/fi';
+import { FiPackage, FiLogOut, FiTrendingUp, FiShoppingBag, FiImage, FiSettings } from 'react-icons/fi';
 
 const links = [
+  { name: 'Dashboard', to: '/admin/dashboard', icon: <FiTrendingUp size={18} /> },
   { name: 'Products', to: '/admin/products', icon: <FiPackage size={18} /> },
+  { name: 'Orders', to: '/admin/orders', icon: <FiShoppingBag size={18} /> },
+  { name: 'Banners', to: '/admin/banners', icon: <FiImage size={18} /> },
+  { name: 'Settings', to: '/admin/settings', icon: <FiSettings size={18} /> },
 ];
 
 export default function AdminSidebar({ isOpen = false, onClose = () => {}, onLogout = () => {} }) {

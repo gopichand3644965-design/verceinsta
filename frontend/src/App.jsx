@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import ProductDetail from './pages/ProductDetail';
 import WishlistDrawer from './components/WishlistDrawer';
 import Wishlist from './pages/Wishlist';
+import Cart from './pages/Cart';
 import Orders from './pages/Orders';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -57,7 +58,7 @@ export default function App() {
             <Route path="/" element={<Home searchQuery={searchQuery} />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/wishlist" element={<Wishlist />} />
-            {/* Cart route removed */}
+            <Route path="/cart" element={<Cart />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />

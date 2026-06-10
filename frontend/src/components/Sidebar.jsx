@@ -6,6 +6,7 @@ const menuItems = [
   { name: 'Home', to: '/' },
   { name: 'Categories', to: '/categories' },
   { name: 'Orders', to: '/orders' },
+  { name: 'Cart', to: '/cart' },
   { name: 'Wishlist', to: '/wishlist' },
   { name: 'Settings', to: '/settings' },
 ];

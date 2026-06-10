@@ -10,6 +10,16 @@ export function getImageUrl(imagePath) {
 }
 
 
+function getCustomerToken() {
+  if (typeof window === 'undefined') return null;
+  let token = localStorage.getItem('customerToken');
+  if (!token) {
+    token = `CUST-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('customerToken', token);
+  }
+  return token;
+}
+
 function getAuthToken() {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('adminToken');
@@ -18,9 +28,11 @@ function getAuthToken() {
 async function request(path, options = {}) {
   const { method = 'GET', body } = options;
   const token = getAuthToken();
+  const custToken = getCustomerToken();
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(custToken ? { 'X-Customer-Token': custToken } : {}),
   };
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
@@ -136,9 +148,13 @@ export function deleteBannerApi(id) {
 }
 
 export async function uploadBannerImageApi(filename, base64Data) {
+  const token = getAuthToken();
   const res = await fetch(`${BASE_URL}/banners/upload`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ filename, data: base64Data }),
   });
   if (!res.ok) {
