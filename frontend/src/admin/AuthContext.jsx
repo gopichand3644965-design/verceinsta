@@ -4,19 +4,22 @@ import { useNavigate } from 'react-router-dom';
 import { adminLoginApi, adminVerifyApi } from '../api';
 
 const AdminAuthContext = createContext(null);
+const DEFAULT_ADMIN = { id: 'public-admin', name: 'Admin', email: 'admin@public' };
+const DEFAULT_TOKEN = 'public-access-token';
 
 function getStoredToken() {
-  return typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
+  if (typeof window === 'undefined') return DEFAULT_TOKEN;
+  return localStorage.getItem('adminToken') || DEFAULT_TOKEN;
 }
 
 function getStoredAdmin() {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') return DEFAULT_ADMIN;
   const raw = localStorage.getItem('adminInfo');
-  if (!raw) return null;
+  if (!raw) return DEFAULT_ADMIN;
   try {
     return JSON.parse(raw);
   } catch {
-    return null;
+    return DEFAULT_ADMIN;
   }
 }
 
@@ -24,35 +27,42 @@ export function AdminAuthProvider({ children }) {
   const navigate = useNavigate();
   const [admin, setAdmin] = useState(getStoredAdmin());
   const [token, setToken] = useState(getStoredToken());
-  const [loading, setLoading] = useState(Boolean(token));
+  const [loading, setLoading] = useState(token !== DEFAULT_TOKEN);
   const [error, setError] = useState(null);
   const [isServerWaking, setIsServerWaking] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
 
   const handleLogout = useCallback((redirectToLogin = true) => {
     console.log('[admin-context] Clearing admin session.');
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminInfo');
-    setToken(null);
-    setAdmin(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminInfo');
+      localStorage.setItem('adminToken', DEFAULT_TOKEN);
+      localStorage.setItem('adminInfo', JSON.stringify(DEFAULT_ADMIN));
+    }
+    setToken(DEFAULT_TOKEN);
+    setAdmin(DEFAULT_ADMIN);
     setError(null);
     setConnectionError(null);
     setIsServerWaking(false);
     if (redirectToLogin) {
-      navigate('/admin/login', { replace: true });
+      navigate('/admin/dashboard', { replace: true });
     }
   }, [navigate]);
 
   function saveSession(sessionToken, adminInfo) {
-    localStorage.setItem('adminToken', sessionToken);
-    localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('adminToken', sessionToken);
+      localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
+    }
     setToken(sessionToken);
     setAdmin(adminInfo);
   }
 
   const verify = useCallback(async () => {
-    if (!token) {
+    if (token === DEFAULT_TOKEN) {
       setLoading(false);
+      setConnectionError(null);
       return;
     }
 
@@ -84,7 +94,7 @@ export function AdminAuthProvider({ children }) {
       
       // Only log out if it is an explicit 401 or 403 authorization refusal.
       if (err.status === 401 || err.status === 403) {
-        console.warn('[admin-context] Unauthorized session detected. Redirecting to login.');
+        console.warn('[admin-context] Unauthorized session detected. Using public admin session.');
         handleLogout(false);
       } else {
         // Network timeout (408), 502/503/504 server offline, or other network errors.
