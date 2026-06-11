@@ -22,7 +22,7 @@ function getCustomerToken() {
 
 function getAuthToken() {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('adminToken');
+  return localStorage.getItem('adminToken') || 'public-access-token';
 }
 
 const inFlightRequests = new Map();

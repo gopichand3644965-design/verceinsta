@@ -94,7 +94,11 @@ export function ProductsProvider({ children }) {
       return saved;
     } catch (err) {
       console.error('Error saving product:', err);
-      const saved = saveProductStorage(product);
+      const fallbackProduct = { ...product };
+      if (!fallbackProduct.id) {
+        fallbackProduct.id = `P-${Date.now()}`;
+      }
+      const saved = saveProductStorage(fallbackProduct);
       setProducts(getProductsStorage());
       return saved;
     }
