@@ -65,7 +65,34 @@ async function processBase64Image(dataString, productId, prefix = 'img') {
   const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
   const base64Data = matches[2];
   const buffer = Buffer.from(base64Data, 'base64');
+  // If Supabase is configured, upload to Supabase Storage and return a permanent public URL.
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const safeName = `${productId}-${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
+      const bucket = 'products';
+      // Attempt upload to Supabase Storage. Use the buffer directly.
+      const { data: uploadData, error: uploadError } = await supabase.storage.from(bucket).upload(safeName, buffer, {
+        contentType: `image/${ext}`,
+        upsert: false,
+      });
+      if (uploadError) {
+        // If upload fails (bucket missing or permissions), fall back to local file write below.
+        console.warn('[processBase64Image] Supabase storage upload failed, falling back to local filesystem:', uploadError.message || uploadError);
+      } else {
+        // Get public URL for uploaded file
+        const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(safeName);
+        if (publicData && publicData.publicUrl) {
+          return publicData.publicUrl;
+        }
+        // If no public URL, fall through to local write as fallback
+        console.warn('[processBase64Image] Supabase returned no public URL, falling back to local filesystem.');
+      }
+    } catch (err) {
+      console.error('[processBase64Image] Supabase storage error, falling back to local filesystem:', err.message || err);
+    }
+  }
 
+  // Fallback: write file to local public assets (used in local/dev environments)
   await fs.mkdir(PRODUCTS_PUBLIC_DIR, { recursive: true });
   const filename = `${productId}-${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
   const filePath = path.join(PRODUCTS_PUBLIC_DIR, filename);

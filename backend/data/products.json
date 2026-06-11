@@ -194,5 +194,13 @@
     "isNewArrival": false,
     "rating": 4.5,
     "id": "P-1781016953646"
+  },
+  {
+    "id": "TEST-P-IMAGE-1",
+    "title": "Test Image Product",
+    "description": "Test image persistence",
+    "price": 19.99,
+    "category": "Test",
+    "image": "/assets/products/TEST-P-IMAGE-1-main-1781181969755-luw22.png"
   }
 ]
