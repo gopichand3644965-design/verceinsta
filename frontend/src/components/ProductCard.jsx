@@ -6,6 +6,7 @@ import { formatPrice } from '../utils/formatPrice';
 import { FiHeart } from 'react-icons/fi';
 import RatingStars from './RatingStars';
 import { motion } from 'framer-motion';
+import { getImageUrl } from '../api';
 
 export default function ProductCard({ product }) {
   const { state, toggleWishlist } = useStore();
@@ -24,7 +25,7 @@ export default function ProductCard({ product }) {
       >
       <div className="relative aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
         <img
-          src={product.image}
+          src={getImageUrl(product.image)}
           alt={product.title}
           className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
           loading="lazy"

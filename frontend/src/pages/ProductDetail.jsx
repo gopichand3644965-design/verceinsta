@@ -4,6 +4,7 @@ import useProducts from '../hooks/useProducts';
 import { formatPrice } from '../utils/formatPrice';
 import RatingStars from '../components/RatingStars';
 import { motion } from 'framer-motion';
+import { getImageUrl } from '../api';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -11,6 +12,7 @@ export default function ProductDetail() {
   const product = products.find((p) => p.id === id);
   const [imageOverride, setImageOverride] = useState(null);
   const mainImage = imageOverride !== null ? imageOverride : (product?.images?.[0] || product?.image || null);
+  const imageSrc = mainImage ? getImageUrl(mainImage) : null;
 
   const [prevProductId, setPrevProductId] = useState(id);
   if (id !== prevProductId) {
@@ -50,7 +52,7 @@ export default function ProductDetail() {
           <div>
             <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
               <img
-                src={mainImage}
+                src={imageSrc}
                 alt={product.title}
                 className="object-cover w-full h-full"
                 loading="lazy"
@@ -67,7 +69,7 @@ export default function ProductDetail() {
                     className={`w-16 h-16 rounded-md overflow-hidden border-2 flex-shrink-0 ${mainImage === img ? 'border-primary' : 'border-transparent'}`}
                     aria-label={`View image ${idx + 1}`}
                   >
-                    <img src={img} alt={`${product.title} view ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img src={getImageUrl(img)} alt={`${product.title} view ${idx + 1}`} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

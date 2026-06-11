@@ -20,6 +20,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/assets/products': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
     // Security headers to prevent browser privacy warnings
     headers: {
