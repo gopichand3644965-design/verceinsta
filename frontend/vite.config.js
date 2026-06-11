@@ -15,16 +15,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      '/assets/banners': {
-        target: 'http://localhost:4000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/assets/products': {
-        target: 'http://localhost:4000',
-        changeOrigin: true,
-        secure: false,
-      },
+      // Note: do NOT proxy static frontend assets; let Vite serve them from
+      // frontend/public so image files in `public/assets/*` are available.
     },
     // Security headers to prevent browser privacy warnings
     headers: {
