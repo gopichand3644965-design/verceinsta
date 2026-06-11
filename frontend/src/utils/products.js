@@ -39,5 +39,11 @@ export function saveProduct(product) {
 
 export function deleteProduct(id) {
   const list = getProducts().filter((p) => p.id !== id);
+  // Safety check: don't save if we're removing too many products (indicates a bug)
+  const currentList = getProducts();
+  if (list.length === 0 && currentList.length > 0) {
+    console.warn(`[deleteProduct] Warning: Product deletion would remove all products. Ignoring delete for ${id}`);
+    return;
+  }
   saveProducts(list);
 }

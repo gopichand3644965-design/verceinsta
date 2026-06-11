@@ -11,7 +11,11 @@ import { getProductsApi, createProductApi, updateProductApi, deleteProductApi } 
 const ProductsContext = createContext(null);
 
 export function ProductsProvider({ children }) {
-  const [products, setProducts] = useState(() => getProductsStorage() || []);
+  const [products, setProducts] = useState(() => {
+    const stored = getProductsStorage();
+    // Ensure we never initialize with an empty array if we have cached data
+    return (Array.isArray(stored) && stored.length > 0) ? stored : [];
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -20,20 +24,40 @@ export function ProductsProvider({ children }) {
       try {
         const fetched = await getProductsApi();
         if (mounted) {
-          setProducts(fetched);
-          saveProductsStorage(fetched);
+          // Only update if we got valid data with products
+          if (Array.isArray(fetched) && fetched.length > 0) {
+            console.log(`[ProductsContext] Loaded ${fetched.length} products from API`);
+            setProducts(fetched);
+            saveProductsStorage(fetched);
+          } else if (!Array.isArray(fetched)) {
+            console.warn('[ProductsContext] API returned invalid product data');
+          }
+          // If fetched is empty array, keep existing products (don't clear them)
         }
-      } catch {
+      } catch (err) {
+        console.error('[ProductsContext] Error loading products:', err);
         // Fallback is already handled by state initialization, but let's make sure it doesn't clear it
+        if (mounted) {
+          const fallback = getProductsStorage();
+          if (Array.isArray(fallback) && fallback.length > 0) {
+            setProducts(fallback);
+          }
+        }
       }
     }
 
     loadProducts();
 
-    const refresh = () => setProducts(getProductsStorage());
+    const refresh = () => setProducts(prev => {
+      const updated = getProductsStorage();
+      return (Array.isArray(updated) && updated.length > 0) ? updated : prev;
+    });
     window.addEventListener('products_updated', refresh);
     const storageHandler = (e) => {
-      if (e.key === 'products') refresh();
+      if (e.key === 'products') {
+        const updated = getProductsStorage();
+        setProducts(prev => (Array.isArray(updated) && updated.length > 0) ? updated : prev);
+      }
     };
     window.addEventListener('storage', storageHandler);
 
@@ -51,10 +75,25 @@ export function ProductsProvider({ children }) {
         ? await updateProductApi(product.id, product)
         : await createProductApi(product);
       const refreshed = await getProductsApi();
-      setProducts(refreshed);
-      saveProductsStorage(refreshed);
+      // Only update if we got valid data (not empty or null)
+      if (Array.isArray(refreshed) && refreshed.length > 0) {
+        setProducts(refreshed);
+        saveProductsStorage(refreshed);
+      } else if (Array.isArray(refreshed)) {
+        // If API returns empty array, keep current products and add the new one
+        const current = [...products];
+        const idx = current.findIndex(p => p.id === product.id);
+        if (idx >= 0) {
+          current[idx] = product;
+        } else {
+          current.push(product);
+        }
+        setProducts(current);
+        saveProductsStorage(current);
+      }
       return saved;
-    } catch {
+    } catch (err) {
+      console.error('Error saving product:', err);
       const saved = saveProductStorage(product);
       setProducts(getProductsStorage());
       return saved;
@@ -65,9 +104,13 @@ export function ProductsProvider({ children }) {
     try {
       await deleteProductApi(id);
       const refreshed = await getProductsApi();
-      setProducts(refreshed);
-      saveProductsStorage(refreshed);
-    } catch {
+      // Only update if we got valid data (ensure we're not accidentally clearing products)
+      if (Array.isArray(refreshed)) {
+        setProducts(refreshed);
+        saveProductsStorage(refreshed);
+      }
+    } catch (err) {
+      console.error('Error deleting product:', err);
       deleteProductStorage(id);
       setProducts(getProductsStorage());
     }
@@ -76,9 +119,14 @@ export function ProductsProvider({ children }) {
   const refreshProducts = async () => {
     try {
       const refreshed = await getProductsApi();
-      setProducts(refreshed);
-      saveProductsStorage(refreshed);
-    } catch {
+      // Only update if we got valid data (ensure we never clear products with empty array)
+      if (Array.isArray(refreshed) && refreshed.length > 0) {
+        setProducts(refreshed);
+        saveProductsStorage(refreshed);
+      }
+    } catch (err) {
+      console.error('Error refreshing products:', err);
+      // Keep current products, don't clear them
       setProducts(getProductsStorage());
     }
   };
