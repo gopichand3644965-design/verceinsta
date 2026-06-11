@@ -1020,6 +1020,37 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: err.message || 'Internal Server Error' });
 });
 
+// Sync admin password hashes from local admins.json into Supabase on startup.
+// This ensures that any password corrections deployed via git propagate to the DB.
+async function syncAdminHashes() {
+  if (!supabase) return;
+  try {
+    const ADMINS_FILE = path.join(DATA_DIR, 'admins.json');
+    const localAdmins = JSON.parse(await fs.readFile(ADMINS_FILE, 'utf8'));
+    if (!Array.isArray(localAdmins) || localAdmins.length === 0) return;
+
+    for (const admin of localAdmins) {
+      if (!admin.email || !admin.password_hash) continue;
+      const { error } = await supabase
+        .from('admins')
+        .upsert({
+          id: admin.id,
+          name: admin.name,
+          email: admin.email.trim().toLowerCase(),
+          password_hash: admin.password_hash,
+          role: admin.role,
+        }, { onConflict: 'email' });
+      if (error) {
+        console.warn(`[admin-sync] Failed to sync admin ${admin.email}:`, error.message);
+      } else {
+        console.log(`[admin-sync] Synced admin hash for: ${admin.email}`);
+      }
+    }
+  } catch (err) {
+    console.warn('[admin-sync] Could not sync admin hashes:', err.message);
+  }
+}
+
 // Initialize database at startup (top-level async IIFE)
 (async () => {
   try {
@@ -1031,6 +1062,10 @@ app.use((err, req, res, next) => {
     try {
       await initProductsDb();
       console.log('Products DB initialized and connected.');
+      // Sync admin password hashes from local file to Supabase
+      syncAdminHashes().catch((syncErr) => {
+        console.warn('[admin-sync] Startup sync error:', syncErr.message);
+      });
       // Run the migration tool to clean up existing base64 product blobs asynchronously
       migrateBase64Products().catch((mErr) => {
         console.error('Migration error:', mErr.message);

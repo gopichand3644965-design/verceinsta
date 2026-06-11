@@ -98,10 +98,19 @@ export function AdminAuthProvider({ children }) {
   }, [token, admin, handleLogout]);
 
   useEffect(() => {
+    // Auto-login bypass for local development: if no token and running on localhost,
+    // create a dummy admin session so the admin portal opens without prompting.
+    if (!token && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      const dummy = { id: 'local-admin', name: 'Admin', email: 'admin@local' };
+      saveSession('local-dev-token', dummy);
+      setLoading(false);
+      return;
+    }
+
     Promise.resolve().then(() => {
       verify();
     });
-  }, [verify]);
+  }, [verify, token]);
 
   const login = useCallback(async (email, password) => {
     setLoading(true);
