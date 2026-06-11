@@ -472,6 +472,7 @@ app.post('/api/products', authenticateAdmin, asyncHandler(async (req, res) => {
   products.push(payload);
   await writeJson(PRODUCTS_FILE, products);
   clearProductsCache();
+  console.log(`[product-create] Product created successfully: ${payload.id}`);
   res.status(201).json(payload);
 }));
 
@@ -497,6 +498,7 @@ app.put('/api/products/:id', authenticateAdmin, asyncHandler(async (req, res) =>
   products[index] = updated;
   await writeJson(PRODUCTS_FILE, products);
   clearProductsCache();
+  console.log(`[product-update] Product updated successfully: ${req.params.id}`);
   res.json(updated);
 }));
 
