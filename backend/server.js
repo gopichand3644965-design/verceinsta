@@ -42,16 +42,10 @@ if (isSupabaseConfigured) {
 // Serving assets
 const PRODUCTS_PUBLIC_DIR = path.join(__dirname, 'public', 'assets', 'products');
 
-// Products and Banners In-Memory Cache
-let productsCache = null;
-let bannersCache = null;
+// Products and Banners In-Memory Cache (Disabled for serverless consistency)
 
-function clearProductsCache() {
-  productsCache = null;
-}
-function clearBannersCache() {
-  bannersCache = null;
-}
+function clearProductsCache() {}
+function clearBannersCache() {}
 
 // Helper to extract base64 image data and save it to public/assets/products
 async function processBase64Image(dataString, productId, prefix = 'img') {
@@ -282,20 +276,14 @@ async function initProductsDb() {
 
 async function getProductsFromDb() {
   if (!supabase) throw new Error('Supabase not initialized');
-  if (productsCache) return productsCache;
   const { data, error } = await supabase.from('products').select('data');
   if (error) throw error;
   const list = (data || []).map((row) => row.data);
-  productsCache = list;
   return list;
 }
 
 async function getProductFromDb(id) {
   if (!supabase) throw new Error('Supabase not initialized');
-  if (productsCache) {
-    const found = productsCache.find((p) => p.id === id);
-    if (found) return found;
-  }
   const { data, error } = await supabase.from('products').select('data').eq('id', id).single();
   if (error && error.code !== 'PGRST116') throw error;
   return data ? data.data : null;
@@ -311,7 +299,6 @@ async function createProductInDb(product) {
     }
     throw error;
   }
-  clearProductsCache();
 }
 
 async function updateProductInDb(id, product) {
@@ -324,7 +311,6 @@ async function updateProductInDb(id, product) {
     }
     throw error;
   }
-  clearProductsCache();
 }
 
 async function deleteProductFromDb(id) {
@@ -336,7 +322,6 @@ async function deleteProductFromDb(id) {
     }
     throw error;
   }
-  clearProductsCache();
 }
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -497,6 +482,10 @@ app.get('/api/ping', (req, res) => {
 });
 
 app.get('/api/products', asyncHandler(async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
   if (isSupabaseConfigured) {
     const products = await getProductsFromDb();
     return res.json(products);
@@ -506,6 +495,10 @@ app.get('/api/products', asyncHandler(async (req, res) => {
 }));
 
 app.get('/api/products/:id', asyncHandler(async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (isSupabaseConfigured) {
     const product = await getProductFromDb(req.params.id);
     if (!product) return res.status(404).json({ error: 'Product not found.' });
