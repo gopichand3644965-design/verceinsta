@@ -202,5 +202,37 @@
     "price": 19.99,
     "category": "Test",
     "image": "/assets/products/TEST-P-IMAGE-1-main-1781181969755-luw22.png"
+  },
+  {
+    "title": "Test Product",
+    "productCode": "TESTSKU123",
+    "link": "https://example.com/test-product",
+    "price": 99,
+    "stock": 100,
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "colors": [
+      "Red",
+      "Blue",
+      "Black"
+    ],
+    "images": [
+      "https://picsum.photos/200/300",
+      "https://picsum.photos/200/301",
+      "https://picsum.photos/200/302"
+    ],
+    "image_url": "https://picsum.photos/200/300",
+    "reviews": [],
+    "description": "This is a test product description for verification.",
+    "category": "Plain",
+    "discount": 10,
+    "isTrending": false,
+    "isNewArrival": false,
+    "rating": 4.5,
+    "id": "P-1781244623899"
   }
 ]
