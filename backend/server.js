@@ -121,12 +121,17 @@ async function cleanProductImageBlobs(product) {
   }
   
   if (Array.isArray(product.images)) {
+    const validImages = [];
     for (let i = 0; i < product.images.length; i++) {
-      if (product.images[i] && product.images[i].startsWith('data:image/')) {
-        product.images[i] = await processBase64Image(product.images[i], prodId, `ref-${i}`);
+      if (product.images[i] && typeof product.images[i] === 'string' && product.images[i].startsWith('data:image/')) {
+        const url = await processBase64Image(product.images[i], prodId, `ref-${i}`);
+        if (url) validImages.push(url);
         modified = true;
+      } else if (product.images[i] && typeof product.images[i] === 'string' && product.images[i].startsWith('http')) {
+        validImages.push(product.images[i]);
       }
     }
+    product.images = validImages;
   }
   return modified;
 }

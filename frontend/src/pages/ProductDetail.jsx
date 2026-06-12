@@ -60,18 +60,21 @@ export default function ProductDetail() {
             </div>
 
             {/* Thumbnails (show up to 3) */}
-            {product.images && product.images.length > 0 && (
+            {product.images && Array.isArray(product.images) && product.images.length > 0 && (
               <div className="flex gap-2 mt-3">
-                {product.images.slice(0, 3).map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setImageOverride(img)}
-                    className={`w-16 h-16 rounded-md overflow-hidden border-2 flex-shrink-0 ${mainImage === img ? 'border-primary' : 'border-transparent'}`}
-                    aria-label={`View image ${idx + 1}`}
-                  >
-                    <img src={getImageUrl(img)} alt={`${product.title} view ${idx + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
+                {product.images
+                  .filter((img) => img && typeof img === 'string')
+                  .slice(0, 3)
+                  .map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setImageOverride(img)}
+                      className={`w-16 h-16 rounded-md overflow-hidden border-2 flex-shrink-0 ${mainImage === img ? 'border-primary' : 'border-transparent'}`}
+                      aria-label={`View image ${idx + 1}`}
+                    >
+                      <img src={getImageUrl(img)} alt={`${product.title} view ${idx + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
               </div>
             )}
           </div>
