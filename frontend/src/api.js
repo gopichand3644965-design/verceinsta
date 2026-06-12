@@ -150,7 +150,7 @@ export function adminVerifyApi(options = {}) {
 }
 
 export function getProductsApi() {
-  return request('/products');
+  return request(`/products?t=${Date.now()}`);
 }
 
 export function getProductApi(id) {

@@ -28,15 +28,15 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
 
 let supabase = null;
-let productsDbAvailable = false;
-let productsDbSeedBlockedByRls = false;
-
 const isSupabaseConfigured = !!(supabaseUrl && supabaseKey);
 
 if (isSupabaseConfigured) {
   supabase = createClient(supabaseUrl, supabaseKey);
 } else {
   console.warn('Supabase credentials not found. Set SUPABASE_URL and SUPABASE_KEY or SUPABASE_SERVICE_ROLE_KEY in .env');
+  if (process.env.VERCEL || process.env.RENDER) {
+    console.error('CRITICAL ERROR: You are running on a serverless platform (Vercel/Render) WITHOUT Supabase configured. Local file writes (products.json) will NOT persist. Products added by the admin will disappear. You MUST configure Supabase.');
+  }
 }
 
 // Serving assets
@@ -274,7 +274,31 @@ async function initProductsDb() {
   productsDbAvailable = true;
 }
 
+let dbInitializing = null;
+
+async function lazyInitDb() {
+  if (productsDbAvailable) return;
+  if (!supabase) return;
+  
+  if (!dbInitializing) {
+    dbInitializing = (async () => {
+      try {
+        await ensureProductsTable();
+        await ensureStorageBucket();
+        await seedProductsFromFileIfEmpty();
+        productsDbAvailable = true;
+      } catch (err) {
+        console.error('Lazy DB Init Error:', err);
+      } finally {
+        dbInitializing = null;
+      }
+    })();
+  }
+  return dbInitializing;
+}
+
 async function getProductsFromDb() {
+  await lazyInitDb();
   if (!supabase) throw new Error('Supabase not initialized');
   const { data, error } = await supabase.from('products').select('data');
   if (error) throw error;
@@ -1143,10 +1167,17 @@ async function syncAdminHashes() {
 
 // Start server locally (if run directly, not required by Vercel)
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Backend running on http://localhost:${PORT}`);
-  });
+  app.listen(PORT, async () => {
+  console.log(`Server is running on port ${PORT}`);
+  if (isSupabaseConfigured) {
+    try {
+      await initProductsDb();
+      console.log('Supabase DB initialized successfully.');
+    } catch (err) {
+      console.error('Failed to initialize Supabase DB:', err.message);
+    }
+  }
+});
 }
 
 module.exports = app;
-
