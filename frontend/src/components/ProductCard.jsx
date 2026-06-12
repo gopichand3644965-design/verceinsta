@@ -7,8 +7,9 @@ import { FiHeart } from 'react-icons/fi';
 import RatingStars from './RatingStars';
 import { motion } from 'framer-motion';
 import { getImageUrl } from '../api';
+import React, { memo } from 'react';
 
-export default function ProductCard({ product }) {
+const ProductCard = memo(function ProductCard({ product }) {
   const { state, toggleWishlist } = useStore();
   const inWishlist = state.wishlist.includes(product.id);
 
@@ -116,4 +117,6 @@ export default function ProductCard({ product }) {
       )}
     </motion.div>
   );
-}
+});
+
+export default ProductCard;

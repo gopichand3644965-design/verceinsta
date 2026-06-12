@@ -12,7 +12,7 @@ export default function SmartImg({ src, alt = '', className = '', placeholder = 
   }, [src]);
 
   if (!src) {
-    return <img src={getImageUrl(placeholder)} alt={alt} className={className} {...rest} />;
+    return <img src={getImageUrl(placeholder)} alt={alt} className={className} loading="lazy" decoding="async" {...rest} />;
   }
 
   const fullUrl = getImageUrl(src) + (retryKey ? `?r=${retryKey}` : '');
@@ -22,6 +22,8 @@ export default function SmartImg({ src, alt = '', className = '', placeholder = 
       src={failed ? getImageUrl(placeholder) : fullUrl}
       alt={alt}
       className={className}
+      loading="lazy"
+      decoding="async"
       onError={(e) => {
         if (!retryKey) {
           // retry once

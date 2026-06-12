@@ -25,16 +25,22 @@ export default function ProductDetail() {
     // If products are still loading, show a loading state
     const productsAvailable = Array.isArray(products) && products.length > 0;
     return (
-      <div className="p-4 text-center">
+      <div className="p-4 max-w-xl mx-auto text-center py-20">
         {productsAvailable ? (
-          <>
-            <p className="text-gray-600 dark:text-gray-300">Product not found.</p>
-            <Link to="/" className="text-primary underline mt-4 inline-block">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-10">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 font-medium">Product not found.</p>
+            <Link to="/" className="text-primary hover:text-primary-dark font-medium underline mt-4 inline-block transition-colors">
               Back to store
             </Link>
-          </>
+          </div>
         ) : (
-          <p className="text-gray-600 dark:text-gray-300">Loading product...</p>
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="w-10 h-10 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
+            <p className="text-sm text-gray-500 animate-pulse font-medium">Loading product details...</p>
+          </div>
         )}
       </div>
     );
@@ -108,7 +114,7 @@ export default function ProductDetail() {
               href={product.link || productUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex w-full items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark"
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark active:scale-95"
             >
               Buy from here
             </a>

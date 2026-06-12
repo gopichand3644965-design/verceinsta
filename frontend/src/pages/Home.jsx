@@ -1,9 +1,11 @@
 // src/pages/Home.jsx
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '../components/ProductCard';
+import ProductSkeleton from '../components/ProductSkeleton';
 import useProducts from '../hooks/useProducts';
 import useSearch from '../hooks/useSearch';
+import useDebounce from '../hooks/useDebounce';
 import { FiChevronRight, FiChevronLeft } from 'react-icons/fi';
 import { FaInstagram } from 'react-icons/fa';
 import { getBannersApi, getImageUrl } from '../api';
@@ -32,13 +34,20 @@ export default function Home({ searchQuery = '' }) {
   const [currentBanner, setCurrentBanner] = useState(0);
   const [banners, setBanners] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Auto-slide hero banner
   useEffect(() => {
     let mounted = true;
+    setIsLoading(true);
     getBannersApi().then((data) => {
-      if (mounted && Array.isArray(data)) setBanners(data);
-    }).catch(() => {});
+      if (mounted) {
+        if (Array.isArray(data)) setBanners(data);
+        setIsLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) setIsLoading(false);
+    });
     return () => { mounted = false; };
   }, []);
 
@@ -59,21 +68,32 @@ export default function Home({ searchQuery = '' }) {
     setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length);
   };
 
+  // Debounce the search query
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   // Filter products based on search query (case-insensitive)
   const products = useProducts();
-  const searchFiltered = useSearch(products, searchQuery);
   
-  // Further filter by category if needed
-  const categoryFiltered = searchFiltered.filter((p) => {
-    if (selectedCategory === 'All') return true;
-    if (selectedCategory === 'Trending') return p.isTrending;
-    if (selectedCategory === 'New Arrivals') return p.isNewArrival;
-    return p.category === selectedCategory;
-  });
+  // Disable loading if products exist
+  useEffect(() => {
+    if (products.length > 0) setIsLoading(false);
+  }, [products]);
 
-  const trendingProducts = products.filter(p => p.isTrending);
-  const newArrivals = products.filter(p => p.isNewArrival);
-  const saleProducts = products.filter(p => p.discount > 0);
+  const searchFiltered = useSearch(products, debouncedSearchQuery);
+  
+  // Further filter by category and memoize
+  const categoryFiltered = React.useMemo(() => {
+    return searchFiltered.filter((p) => {
+      if (selectedCategory === 'All') return true;
+      if (selectedCategory === 'Trending') return p.isTrending;
+      if (selectedCategory === 'New Arrivals') return p.isNewArrival;
+      return p.category === selectedCategory;
+    });
+  }, [searchFiltered, selectedCategory]);
+
+  const trendingProducts = React.useMemo(() => products.filter(p => p.isTrending), [products]);
+  const newArrivals = React.useMemo(() => products.filter(p => p.isNewArrival), [products]);
+  const saleProducts = React.useMemo(() => products.filter(p => p.discount > 0), [products]);
 
 
 
@@ -84,14 +104,23 @@ export default function Home({ searchQuery = '' }) {
       {searchQuery ? (
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Search Results for "{searchQuery}"</h2>
-          {categoryFiltered.length > 0 ? (
+          {isLoading && products.length === 0 ? (
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+              {[...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
+            </div>
+          ) : categoryFiltered.length > 0 ? (
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
               {categoryFiltered.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>
           ) : (
-            <p className="text-gray-500">No products found.</p>
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-2">
+                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </div>
+              <p className="text-gray-500 font-medium">No products found for "{searchQuery}".</p>
+            </div>
           )}
         </div>
       ) : (
@@ -222,7 +251,11 @@ export default function Home({ searchQuery = '' }) {
           ) : (
             <div className="pt-2">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 px-1">{selectedCategory}</h2>
-              {categoryFiltered.length > 0 ? (
+              {isLoading && products.length === 0 ? (
+                <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {[...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
+                </div>
+              ) : categoryFiltered.length > 0 ? (
                 <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
                   {categoryFiltered.map((p) => (
                     <ProductCard key={p.id} product={p} />
