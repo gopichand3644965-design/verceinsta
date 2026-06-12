@@ -46,7 +46,7 @@ export default function WishlistDrawer({ isOpen, onClose }) {
               ) : (
                 items.map((product) => (
                   <div key={product.id} className="flex items-center mb-4">
-                    <img src={product.image} alt={product.title} className="w-12 h-12 object-cover rounded mr-3" />
+                    <img src={product.image_url} alt={product.title} className="w-12 h-12 object-cover rounded mr-3" />
                     <div className="flex-1">
                       <Link to={`/product/${product.id}`} className="font-medium text-gray-900 dark:text-gray-100" onClick={onClose}>
                         {product.title}

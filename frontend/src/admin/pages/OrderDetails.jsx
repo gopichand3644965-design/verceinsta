@@ -133,7 +133,7 @@ export default function OrderDetails() {
                 <div key={item.id + item.title} className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-4">
                     <div className="h-20 w-20 overflow-hidden rounded-3xl bg-slate-200 dark:bg-slate-800">
-                      {item.image ? <img src={item.image} alt={item.title} className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-slate-500">No image</div>}
+                      {item.image_url ? <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-slate-500">No image</div>}
                     </div>
                     <div>
                       <p className="text-sm text-slate-500 dark:text-slate-400">{item.productCode || item.id}</p>

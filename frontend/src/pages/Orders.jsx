@@ -87,7 +87,7 @@ export default function Orders() {
               <div className="space-y-4">
                 {order.items.map((item) => (
                   <div key={item.id} className="flex gap-4 items-center rounded-xl p-3 bg-gray-50 dark:bg-gray-900">
-                    <img src={item.image} alt={item.title} className="w-16 h-16 object-cover rounded-lg" />
+                    <img src={item.image_url} alt={item.title} className="w-16 h-16 object-cover rounded-lg" />
                     <div className="flex-1">
                       <p className="font-semibold text-gray-900 dark:text-gray-100">{item.title}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">{item.productCode}</p>

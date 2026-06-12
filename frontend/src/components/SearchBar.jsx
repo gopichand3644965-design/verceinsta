@@ -51,7 +51,7 @@ export default function SearchBar({ query, setQuery, onClose }) {
               }}
               className="flex items-center p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 last:border-0"
             >
-              <img src={p.image} alt={p.title} className="w-10 h-10 object-cover rounded mr-3" />
+              <img src={p.image_url} alt={p.title} className="w-10 h-10 object-cover rounded mr-3" />
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{p.title}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{p.productCode}</p>

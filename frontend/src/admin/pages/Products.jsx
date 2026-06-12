@@ -58,7 +58,7 @@ export default function Products() {
               <tr key={p.id} className="border-t">
                 <td className="py-3 min-w-0">
                   <div className="flex items-center gap-3 min-w-0">
-                    <img src={p.image} alt="" className="w-12 h-12 object-cover rounded" />
+                    <img src={p.image_url} alt="" className="w-12 h-12 object-cover rounded" />
                     <div className="min-w-0">
                       <div className="font-medium text-gray-900 dark:text-gray-100 break-words">{p.title}</div>
                       <div className="text-xs text-gray-500 break-words">{p.colors?.join(', ')}</div>
@@ -92,7 +92,7 @@ export default function Products() {
           filtered.map((p) => (
             <div key={p.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex gap-3 mb-3">
-                <img src={p.image} alt={p.title} className="w-20 h-20 object-cover rounded" />
+                <img src={p.image_url} alt={p.title} className="w-20 h-20 object-cover rounded" />
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 break-words">{p.title}</h3>
                   <p className="text-xs text-gray-500 mt-1 break-words">{p.productCode}</p>

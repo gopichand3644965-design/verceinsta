@@ -123,7 +123,7 @@ export default function AdminDashboard() {
   const lowStockProducts = products.slice(0, 4).map((product, index) => ({
     id: product.id,
     title: product.title,
-    image: product.image || '/assets/products/crew-neck.jpg',
+    image_url: product.image_url || '/assets/products/crew-neck.jpg',
     stock: Math.max(1, 10 - index * 2),
   }));
 
@@ -248,7 +248,7 @@ export default function AdminDashboard() {
                 const item = order.items?.[0] || {};
                 return (
                   <div key={order.id} className="grid grid-cols-[auto_1fr_auto] gap-4 items-center rounded-3xl border border-slate-200/80 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-4">
-                    <img src={item.image || '/assets/products/crew-neck.jpg'} alt={item.title} className="h-16 w-16 rounded-2xl object-cover" />
+                    <img src={item.image_url || '/assets/products/crew-neck.jpg'} alt={item.title} className="h-16 w-16 rounded-2xl object-cover" />
                     <div>
                       <p className="font-semibold text-slate-900 dark:text-white">{order.id}</p>
                       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{item.title || 'Premium T-Shirt'} • {item.quantity || 1} item(s)</p>
@@ -277,7 +277,7 @@ export default function AdminDashboard() {
             <div className="space-y-3">
               {lowStockProducts.map((product) => (
                 <div key={product.id} className="flex items-center gap-3 rounded-3xl border border-slate-200/80 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-4">
-                  <img src={product.image} alt={product.title} className="h-16 w-16 rounded-2xl object-cover" />
+                  <img src={product.image_url} alt={product.title} className="h-16 w-16 rounded-2xl object-cover" />
                   <div className="flex-1">
                     <p className="font-semibold text-slate-900 dark:text-white">{product.title}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{product.stock} remaining</p>

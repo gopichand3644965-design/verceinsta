@@ -71,7 +71,7 @@ export default function CartDrawer({ isOpen, onClose }) {
         id: item.id,
         title: product?.title || 'Unknown product',
         productCode: product?.productCode || '',
-        image: product?.image || '',
+        image_url: product?.image_url || '',
         quantity: item.quantity,
         unitPrice,
         totalPrice: unitPrice * item.quantity,
@@ -138,7 +138,7 @@ export default function CartDrawer({ isOpen, onClose }) {
                   if (!product) return null;
                   return (
                     <div key={item.id} className="flex items-center mb-4">
-                      <img src={product.image} alt={product.title} className="w-12 h-12 object-cover rounded mr-3" />
+                      <img src={product.image_url} alt={product.title} className="w-12 h-12 object-cover rounded mr-3" />
                       <div className="flex-1">
                         <Link to={`/product/${product.id}`} className="font-medium text-gray-900 dark:text-gray-100" onClick={onClose}>
                           {product.title}

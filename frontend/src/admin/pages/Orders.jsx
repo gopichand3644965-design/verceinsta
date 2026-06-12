@@ -354,7 +354,7 @@ export default function Orders() {
                     {order.items?.map((item) => (
                       <div key={`${item.id}-${item.title}`} className="grid gap-3 sm:grid-cols-[auto_1fr_auto] items-center">
                         <div className="h-16 w-16 overflow-hidden rounded-3xl bg-slate-200 dark:bg-slate-800">
-                          {item.image ? <img src={item.image} alt={item.title} className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-slate-500">No image</div>}
+                          {item.image_url ? <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-slate-500">No image</div>}
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-slate-900 dark:text-white">{item.title}</p>

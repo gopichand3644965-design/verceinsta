@@ -68,7 +68,7 @@ export default function Cart() {
         id: item.product.id,
         title: item.product.title,
         productCode: item.product.productCode,
-        image: item.product.image,
+        image_url: item.product.image_url,
         quantity: item.quantity,
         unitPrice,
         totalPrice: unitPrice * item.quantity,
@@ -112,7 +112,7 @@ export default function Cart() {
           <div className="space-y-4">
             {items.map((item) => (
               <div key={item.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex gap-4">
-                <img src={item.product.image} alt={item.product.title} className="w-24 h-24 object-cover rounded-lg" />
+                <img src={item.product.image_url} alt={item.product.title} className="w-24 h-24 object-cover rounded-lg" />
                 <div className="flex-1">
                   <h2 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{item.product.title}</h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{item.product.productCode}</p>

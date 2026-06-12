@@ -11,7 +11,7 @@ export default function ProductDetail() {
   const products = useProducts();
   const product = products.find((p) => p.id === id);
   const [imageOverride, setImageOverride] = useState(null);
-  const mainImage = imageOverride !== null ? imageOverride : (product?.images?.[0] || product?.image || null);
+  const mainImage = imageOverride !== null ? imageOverride : (product?.images?.[0] || product?.image_url || null);
   const imageSrc = mainImage ? getImageUrl(mainImage) : null;
 
   const [prevProductId, setPrevProductId] = useState(id);

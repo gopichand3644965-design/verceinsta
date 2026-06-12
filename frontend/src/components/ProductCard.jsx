@@ -25,7 +25,7 @@ export default function ProductCard({ product }) {
       >
       <div className="relative aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
         <img
-          src={getImageUrl(product.image)}
+          src={getImageUrl(product.image_url)}
           alt={product.title}
           className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
           loading="lazy"

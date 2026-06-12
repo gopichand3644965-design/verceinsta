@@ -76,19 +76,18 @@ async function processBase64Image(dataString, productId, prefix = 'img') {
         upsert: false,
       });
       if (uploadError) {
-        // If upload fails (bucket missing or permissions), fall back to local file write below.
-        console.warn('[processBase64Image] Supabase storage upload failed, falling back to local filesystem:', uploadError.message || uploadError);
-      } else {
-        // Get public URL for uploaded file
-        const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(safeName);
-        if (publicData && publicData.publicUrl) {
-          return publicData.publicUrl;
-        }
-        // If no public URL, fall through to local write as fallback
-        console.warn('[processBase64Image] Supabase returned no public URL, falling back to local filesystem.');
+        throw new Error(`Supabase storage upload failed: ${uploadError.message || uploadError}`);
       }
+      
+      // Get public URL for uploaded file
+      const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(safeName);
+      if (publicData && publicData.publicUrl) {
+        return publicData.publicUrl;
+      }
+      throw new Error('Supabase returned no public URL');
     } catch (err) {
-      console.error('[processBase64Image] Supabase storage error, falling back to local filesystem:', err.message || err);
+      console.error('[processBase64Image] Supabase storage error:', err.message || err);
+      throw err; // DO NOT FALLBACK IN PRODUCTION
     }
   }
 
@@ -105,10 +104,22 @@ async function processBase64Image(dataString, productId, prefix = 'img') {
 async function cleanProductImageBlobs(product) {
   let modified = false;
   const prodId = product.id || `P-${Date.now()}`;
-  if (product.image && product.image.startsWith('data:image/')) {
-    product.image = await processBase64Image(product.image, prodId, 'main');
+  
+  if (product.image_url && product.image_url.startsWith('data:image/')) {
+    product.image_url = await processBase64Image(product.image_url, prodId, 'main');
     modified = true;
   }
+  // For backwards compatibility during migration
+  if (product.image && product.image.startsWith('data:image/')) {
+    product.image_url = await processBase64Image(product.image, prodId, 'main');
+    delete product.image;
+    modified = true;
+  } else if (product.image) {
+    product.image_url = product.image;
+    delete product.image;
+    modified = true;
+  }
+  
   if (Array.isArray(product.images)) {
     for (let i = 0; i < product.images.length; i++) {
       if (product.images[i] && product.images[i].startsWith('data:image/')) {
@@ -225,9 +236,32 @@ async function seedProductsFromFileIfEmpty() {
   }
 }
 
+async function ensureStorageBucket() {
+  if (!supabase) return;
+  try {
+    const { data: buckets, error } = await supabase.storage.listBuckets();
+    if (error) {
+      console.warn('Could not list buckets. Check permissions:', error.message);
+      return;
+    }
+    const exists = buckets.find(b => b.name === 'products');
+    if (!exists) {
+      console.log('Creating "products" storage bucket...');
+      await supabase.storage.createBucket('products', {
+        public: true,
+        fileSizeLimit: 52428800,
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+      });
+    }
+  } catch (err) {
+    console.error('Failed to ensure bucket:', err.message);
+  }
+}
+
 async function initProductsDb() {
   if (!supabase) throw new Error('Supabase not initialized');
   await ensureProductsTable();
+  await ensureStorageBucket();
   try {
     await seedProductsFromFileIfEmpty();
   } catch (err) {
