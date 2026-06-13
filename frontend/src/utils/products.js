@@ -1,15 +1,19 @@
-import productsJson from '../data/products.json';
+// utils/products.js — localStorage cache for products
+// IMPORTANT: Never use hardcoded JSON as a fallback. The API is the single source of truth.
 
 const STORAGE_KEY = 'products';
 
 export function getProducts() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed;
+    }
   } catch {
     // ignore
   }
-  return productsJson;
+  return [];
 }
 
 export function getProduct(id) {
@@ -17,6 +21,7 @@ export function getProduct(id) {
 }
 
 export function saveProducts(arr) {
+  if (!Array.isArray(arr)) return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
   try {
     window.dispatchEvent(new Event('products_updated'));
@@ -39,11 +44,5 @@ export function saveProduct(product) {
 
 export function deleteProduct(id) {
   const list = getProducts().filter((p) => p.id !== id);
-  // Safety check: don't save if we're removing too many products (indicates a bug)
-  const currentList = getProducts();
-  if (list.length === 0 && currentList.length > 0) {
-    console.warn(`[deleteProduct] Warning: Product deletion would remove all products. Ignoring delete for ${id}`);
-    return;
-  }
   saveProducts(list);
 }

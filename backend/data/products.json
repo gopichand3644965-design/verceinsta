@@ -6,12 +6,7 @@
     "price": 35,
     "discount": 5,
     "rating": 4.5,
-    "image": "/assets/products/crew-neck.jpg",
-    "images": [
-      "/assets/products/crew-neck.jpg",
-      "/assets/products/crew-neck.jpg",
-      "/assets/products/crew-neck.jpg"
-    ],
+    "images": [],
     "colors": [
       "#000000",
       "#ffffff",
@@ -27,7 +22,8 @@
     "description": "A timeless classic crew neck T-shirt crafted from 100% premium cotton. Soft, breathable, and built to last.",
     "isTrending": true,
     "isNewArrival": false,
-    "category": "Plain"
+    "category": "Plain",
+    "image_url": "/assets/products/crew-neck.jpg"
   },
   {
     "id": "TSHIRT002",
@@ -36,12 +32,7 @@
     "price": 34.99,
     "discount": 0,
     "rating": 4.8,
-    "image": "/assets/products/v-neck.jpg",
-    "images": [
-      "/assets/products/v-neck.jpg",
-      "/assets/products/v-neck.jpg",
-      "/assets/products/v-neck.jpg"
-    ],
+    "images": [],
     "colors": [
       "#000000",
       "#333333",
@@ -57,7 +48,8 @@
     "description": "Premium V-neck T-shirt with a modern slim fit. Made from ultra-soft jersey fabric for all-day comfort.",
     "isTrending": false,
     "isNewArrival": true,
-    "category": "Plain"
+    "category": "Plain",
+    "image_url": "/assets/products/v-neck.jpg"
   },
   {
     "id": "TSHIRT003",
@@ -66,12 +58,7 @@
     "price": 24.99,
     "discount": 10,
     "rating": 4.2,
-    "image": "/assets/products/striped.jpg",
-    "images": [
-      "/assets/products/striped.jpg",
-      "/assets/products/striped.jpg",
-      "/assets/products/striped.jpg"
-    ],
+    "images": [],
     "colors": [
       "#0044ff",
       "#ff4400",
@@ -87,7 +74,8 @@
     "description": "A vibrant striped summer tee perfect for casual outings. Lightweight fabric keeps you cool all day.",
     "isTrending": true,
     "isNewArrival": false,
-    "category": "Striped"
+    "category": "Striped",
+    "image_url": "/assets/products/striped.jpg"
   },
   {
     "id": "TSHIRT004",
@@ -96,12 +84,7 @@
     "price": 45,
     "discount": 0,
     "rating": 4.9,
-    "image": "/assets/products/polo.jpg",
-    "images": [
-      "/assets/products/polo.jpg",
-      "/assets/products/polo.jpg",
-      "/assets/products/polo.jpg"
-    ],
+    "images": [],
     "colors": [
       "#1a202c",
       "#ffffff",
@@ -115,7 +98,8 @@
     "description": "Elevate your casual look with this premium polo. Features a ribbed collar and breathable pique fabric.",
     "isTrending": true,
     "isNewArrival": true,
-    "category": "Polo"
+    "category": "Polo",
+    "image_url": "/assets/products/polo.jpg"
   },
   {
     "id": "TSHIRT005",
@@ -124,12 +108,7 @@
     "price": 27.5,
     "discount": 15,
     "rating": 4.1,
-    "image": "/assets/products/graphic.jpg",
-    "images": [
-      "/assets/products/graphic.jpg",
-      "/assets/products/graphic.jpg",
-      "/assets/products/graphic.jpg"
-    ],
+    "images": [],
     "colors": [
       "#000000"
     ],
@@ -141,7 +120,8 @@
     "description": "Make a statement with this modern abstract graphic tee. Printed on premium ultra-soft cotton.",
     "isTrending": false,
     "isNewArrival": true,
-    "category": "Graphic"
+    "category": "Graphic",
+    "image_url": "/assets/products/graphic.jpg"
   },
   {
     "title": "gh",
@@ -155,19 +135,15 @@
     "colors": [
       "black"
     ],
-    "images": [
-      "/assets/products/P-1780297897246-ref-0-1781162809615-cd7bf.png",
-      "/assets/products/P-1780297897246-ref-1-1781162809617-r8xms.png",
-      "/assets/products/P-1780297897246-ref-2-1781162809619-o78x6.png"
-    ],
-    "image": "/assets/products/P-1780297897246-main-1781162809610-7zr2f.png",
+    "images": [],
     "reviews": [],
     "description": "huihfiuf",
     "category": "Plain",
     "discount": 0,
     "isTrending": false,
     "isNewArrival": false,
-    "id": "P-1780297897246"
+    "id": "P-1780297897246",
+    "image_url": "/assets/products/P-1780297897246-main-1781162809610-7zr2f.png"
   },
   {
     "title": "premium ",
@@ -180,12 +156,7 @@
       "23"
     ],
     "colors": [],
-    "images": [
-      "/assets/products/P-1781016953646-ref-0-1781162809624-j06xg.png",
-      "/assets/products/P-1781016953646-ref-1-1781162809626-hmaol.png",
-      "/assets/products/P-1781016953646-ref-2-1781162809628-uujfj.png"
-    ],
-    "image": "/assets/products/P-1781016953646-main-1781162809621-xoo2w.png",
+    "images": [],
     "reviews": [],
     "description": "this is a premium product",
     "category": "Plain",
@@ -193,7 +164,8 @@
     "isTrending": false,
     "isNewArrival": false,
     "rating": 4.5,
-    "id": "P-1781016953646"
+    "id": "P-1781016953646",
+    "image_url": "/assets/products/P-1781016953646-main-1781162809621-xoo2w.png"
   },
   {
     "id": "TEST-P-IMAGE-1",
@@ -201,7 +173,7 @@
     "description": "Test image persistence",
     "price": 19.99,
     "category": "Test",
-    "image": "/assets/products/TEST-P-IMAGE-1-main-1781181969755-luw22.png"
+    "image_url": "/assets/products/TEST-P-IMAGE-1-main-1781181969755-luw22.png"
   },
   {
     "title": "Test Product",

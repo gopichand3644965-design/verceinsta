@@ -145,13 +145,21 @@ export default function ProductEdit() {
       rating: Number(form.rating || 0),
     };
 
+    // Always ensure the product has an ID
     if (id) {
       payload.id = id;
+    } else {
+      payload.id = `P-${Date.now()}`;
     }
 
-    await saveProduct(payload);
-    alert('Product saved.');
-    navigate('/admin/products');
+    try {
+      await saveProduct(payload);
+      alert('Product saved successfully!');
+      navigate('/admin/products');
+    } catch (err) {
+      console.error('Failed to save product:', err);
+      alert(`Failed to save product: ${err.message || 'Unknown error'}. Please check your connection and try again.`);
+    }
   };
 
   return (

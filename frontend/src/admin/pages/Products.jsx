@@ -7,7 +7,7 @@ import { useState } from 'react';
 export default function Products() {
   const [query, setQuery] = useState('');
   const items = useProducts();
-  const { deleteProduct } = useProductsContext();
+  const { deleteProduct, error, refreshProducts } = useProductsContext();
 
   const filtered = items.filter((p) => {
     const title = p.title || '';
@@ -18,10 +18,14 @@ export default function Products() {
     );
   });
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!confirm('Delete this product? This cannot be undone.')) return;
-    deleteProduct(id);
-    alert('Product deleted.');
+    try {
+      await deleteProduct(id);
+      alert('Product deleted.');
+    } catch (err) {
+      alert(`Failed to delete product: ${err.message || 'Unknown error'}`);
+    }
   };
 
   return (
@@ -38,6 +42,20 @@ export default function Products() {
           <Link to="/admin/products/new" className="bg-primary px-4 py-2 rounded-md text-white font-medium hover:bg-primary-dark transition-colors whitespace-normal">Add product</Link>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4 flex items-center justify-between">
+          <div>
+            <strong>Error loading products:</strong> {error}
+          </div>
+          <button 
+            onClick={() => refreshProducts()} 
+            className="text-sm px-3 py-1 bg-red-100 dark:bg-red-800 rounded hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Desktop Table - Hidden on mobile */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hidden sm:block overflow-x-auto">

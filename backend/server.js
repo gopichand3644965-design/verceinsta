@@ -28,6 +28,8 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
 
 let supabase = null;
+let productsDbAvailable = false;
+let productsDbSeedBlockedByRls = false;
 const isSupabaseConfigured = !!(supabaseUrl && supabaseKey);
 
 if (isSupabaseConfigured) {
@@ -132,23 +134,28 @@ async function cleanProductImageBlobs(product) {
 
 // Migrate Base64 product blobs from local JSON and Supabase DB
 async function migrateBase64Products() {
-  console.log('Starting Base64 product image migration scan...');
+  console.log('[migrate] Starting Base64 product image migration scan...');
   
   // 1. Migrate products.json
   try {
     const products = await readJson(PRODUCTS_FILE, []);
     let localModified = false;
     for (const p of products) {
-      if (await cleanProductImageBlobs(p)) {
-        localModified = true;
+      try {
+        if (await cleanProductImageBlobs(p)) {
+          localModified = true;
+        }
+      } catch (prodErr) {
+        console.error(`[migrate] Failed to migrate local product ${p.id || 'unknown'}:`, prodErr.message);
+        // Continue processing other products — don't abort the entire migration
       }
     }
     if (localModified) {
       await writeJson(PRODUCTS_FILE, products);
-      console.log('Successfully migrated Base64 images in products.json and saved files locally.');
+      console.log('[migrate] Successfully migrated Base64 images in products.json.');
     }
   } catch (err) {
-    console.error('Failed migrating local products.json:', err.message);
+    console.error('[migrate] Failed migrating local products.json:', err.message);
   }
 
   // 2. Migrate Supabase DB
@@ -158,24 +165,33 @@ async function migrateBase64Products() {
       if (error) throw error;
       
       let dbModifiedCount = 0;
+      let dbErrorCount = 0;
       for (const row of (data || [])) {
-        const product = row.data;
-        if (await cleanProductImageBlobs(product)) {
-          // Update in Supabase
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ data: product })
-            .eq('id', row.id);
-          if (updateError) throw updateError;
-          dbModifiedCount++;
+        try {
+          const product = row.data;
+          if (await cleanProductImageBlobs(product)) {
+            const { error: updateError } = await supabase
+              .from('products')
+              .update({ data: product })
+              .eq('id', row.id);
+            if (updateError) throw updateError;
+            dbModifiedCount++;
+          }
+        } catch (prodErr) {
+          dbErrorCount++;
+          console.error(`[migrate] Failed to migrate Supabase product ${row.id}:`, prodErr.message);
+          // Continue processing other products
         }
       }
       if (dbModifiedCount > 0) {
-        console.log(`Successfully migrated ${dbModifiedCount} product Base64 blobs in Supabase.`);
+        console.log(`[migrate] Successfully migrated ${dbModifiedCount} product Base64 blobs in Supabase.`);
         clearProductsCache();
       }
+      if (dbErrorCount > 0) {
+        console.warn(`[migrate] ${dbErrorCount} product(s) failed migration — see errors above.`);
+      }
     } catch (err) {
-      console.error('Failed migrating Supabase products table:', err.message);
+      console.error('[migrate] Failed migrating Supabase products table:', err.message);
     }
   }
 }
@@ -210,29 +226,43 @@ async function ensureProductsTable() {
 
 async function seedProductsFromFileIfEmpty() {
   if (!supabase) return;
-  const { data, error } = await supabase.from('products').select('id').limit(1);
+
+  // Use count to reliably check if the table has ANY rows.
+  // This prevents race conditions on serverless cold starts where
+  // a brief empty-table check could trigger re-seeding with stale JSON data.
+  const { count, error } = await supabase
+    .from('products')
+    .select('id', { count: 'exact', head: true });
 
   if (error) {
     throw new Error(`Products table check failed: ${error.message}`);
   }
 
-  if (!data || data.length === 0) {
-    const products = await readJson(PRODUCTS_FILE, []);
-    if (Array.isArray(products) && products.length > 0) {
-      const { error: insertError } = await supabase.from('products').insert(
-        products.map((p) => ({ id: p.id, data: p }))
-      );
-      if (insertError) {
-        if (isRlsError(insertError.message)) {
-          console.warn('Supabase insert blocked by row-level security; skipping initial seed.');
-          productsDbSeedBlockedByRls = true;
-          return;
-        }
-        throw new Error(`Could not seed products: ${insertError.message}`);
-      }
-      console.log('Seeded products from JSON file to Supabase');
-    }
+  if (count > 0) {
+    console.log(`[seed] Products table already has ${count} rows — skipping seed.`);
+    return;
   }
+
+  // Table is truly empty — seed from local JSON
+  console.log('[seed] Products table is empty, seeding from products.json...');
+  const products = await readJson(PRODUCTS_FILE, []);
+  if (!Array.isArray(products) || products.length === 0) {
+    console.log('[seed] No products found in products.json — nothing to seed.');
+    return;
+  }
+
+  const { error: insertError } = await supabase.from('products').insert(
+    products.map((p) => ({ id: p.id, data: p }))
+  );
+  if (insertError) {
+    if (isRlsError(insertError.message)) {
+      console.warn('[seed] Supabase insert blocked by row-level security; skipping initial seed.');
+      productsDbSeedBlockedByRls = true;
+      return;
+    }
+    throw new Error(`Could not seed products: ${insertError.message}`);
+  }
+  console.log(`[seed] Seeded ${products.length} products from JSON file to Supabase.`);
 }
 
 async function ensureStorageBucket() {
@@ -1143,7 +1173,7 @@ async function syncAdminHashes() {
   } catch (err) {
     // Ignore error if folder creation fails
   }
-  if (isSupabaseConfigured) {
+  if (isSupabaseConfigured && !productsDbAvailable) {
     try {
       await initProductsDb();
       console.log('Products DB initialized and connected.');
@@ -1160,24 +1190,16 @@ async function syncAdminHashes() {
       console.warn('WARNING: Products DB not available on startup:', err && err.message ? err.message : err);
       console.warn('Backend will fall back to local JSON storage for this session.');
     }
-  } else {
+  } else if (!isSupabaseConfigured) {
     console.log('Supabase not configured. Using local JSON fallback storage.');
   }
 })();
 
 // Start server locally (if run directly, not required by Vercel)
 if (require.main === module) {
-  app.listen(PORT, async () => {
-  console.log(`Server is running on port ${PORT}`);
-  if (isSupabaseConfigured) {
-    try {
-      await initProductsDb();
-      console.log('Supabase DB initialized successfully.');
-    } catch (err) {
-      console.error('Failed to initialize Supabase DB:', err.message);
-    }
-  }
-});
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
 }
 
 module.exports = app;
