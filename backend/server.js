@@ -34,6 +34,14 @@ const isSupabaseConfigured = !!(supabaseUrl && supabaseKey);
 
 if (isSupabaseConfigured) {
   supabase = createClient(supabaseUrl, supabaseKey);
+  // Warn if the service role key looks like the anon key (they should be different)
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_KEY &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY === process.env.SUPABASE_KEY) {
+    console.warn('⚠️  WARNING: SUPABASE_SERVICE_ROLE_KEY is identical to SUPABASE_KEY (anon key).');
+    console.warn('   The anon key does NOT bypass Row-Level Security. Storage uploads and DB writes may fail.');
+    console.warn('   To fix: Go to Supabase Dashboard > Settings > API > Service Role Key, and set SUPABASE_SERVICE_ROLE_KEY to that value.');
+    console.warn('   Alternatively, apply the storage RLS policies from SUPABASE_STORAGE_POLICY.sql in the SQL Editor.');
+  }
 } else {
   console.warn('Supabase credentials not found. Set SUPABASE_URL and SUPABASE_KEY or SUPABASE_SERVICE_ROLE_KEY in .env');
   if (process.env.VERCEL || process.env.RENDER) {
